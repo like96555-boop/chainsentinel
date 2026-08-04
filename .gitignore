@@ -1,0 +1,17 @@
+# dependencies
+node_modules/
+
+# build
+.next/
+out/
+
+# env & secrets
+.env
+.env.*
+!.env.example
+data/secrets*
+data/leads.json
+
+# misc
+*.log
+.DS_Store

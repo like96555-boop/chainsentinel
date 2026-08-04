@@ -1,0 +1,14 @@
+services:
+  chainsentinel:
+    build: .
+    container_name: chainsentinel
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - cs-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  cs-data:

@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #05070d;
+  color: #e6edf7;
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+::selection {
+  background: rgba(56, 224, 255, 0.35);
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(56, 224, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 224, 255, 0.05) 1px, transparent 1px);
+  background-size: 44px 44px;
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "address": "TDemoPhishSink11111111111111111111",
+    "label": "演示数据 - 模拟钓鱼归集地址",
+    "note": "演示数据：用于展示黑名单命中逻辑，非真实风险地址。",
+    "source": "chainsentinel-demo-seed"
+  },
+  {
+    "address": "TDemoMixerGate22222222222222222222",
+    "label": "演示数据 - 模拟混币器出口",
+    "note": "演示数据：用于展示黑名单命中逻辑，非真实风险地址。",
+    "source": "chainsentinel-demo-seed"
+  },
+  {
+    "address": "TDemoScamHub3333333333333333333333",
+    "label": "演示数据 - 模拟诈骗收款地址",
+    "note": "演示数据：用于展示黑名单命中逻辑，非真实风险地址。",
+    "source": "chainsentinel-demo-seed"
+  }
+]
