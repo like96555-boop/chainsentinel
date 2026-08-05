@@ -1,6 +1,8 @@
-# 链哨 ChainSentinel（P0）
+# 链哨 ChainSentinel（P0+多链版）
 
-面向商户与机构的链上风控 SaaS —— TRON 网络 USDT 收款前地址风险识别。**3 秒识别黑钱地址**，红绿灯结论 + 链上证据直达 Tronscan。
+面向商户与机构的链上风控 SaaS —— **3 秒识别黑钱地址**，红绿灯结论 + 链上证据直达各链浏览器。
+
+**支持链**：TRON（T 开头，TronGrid/Tronscan）· BTC（bc1/1/3 开头，Blockstream）· ETH（0x，公共 RPC/Etherscan）。地址粘贴后**自动识别链**，无需手动选择。
 
 技术栈：Next.js 14（App Router）+ TypeScript + Tailwind CSS + framer-motion + lucide-react + zod。
 
@@ -47,6 +49,16 @@ docker compose up -d
 - 全部公开接口 zod 校验入参 + 内存限流（每 IP 每分钟 10 次）。
 - 安全响应头：`X-Content-Type-Options` / `X-Frame-Options: DENY` / `Referrer-Policy` / 基础 CSP。
 - `.gitignore` 已排除 `.env*`、`data/secrets*`、`data/leads.json`。
+
+## 测试
+
+服务运行中执行（三套件：功能回归 12 项 + 安全 16 项 + 压测）：
+
+```bash
+npm test
+```
+
+报告自动保存到 `test-reports/`。最近一次实测（2026-08-05）：回归 12/12、安全 16/16、首页 100 并发 100% 成功 p95=180ms、/api/check 限流冲击下 429 拒绝成本 51ms、内存无异常。
 
 ## 目录结构
 
