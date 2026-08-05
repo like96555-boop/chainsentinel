@@ -1,11 +1,16 @@
 import fs from 'fs';
 import path from 'path';
+import type { ChainId } from './chains';
+
+export type BlacklistChain = ChainId | 'any';
 
 export interface BlacklistEntry {
   address: string;
   label: string;
   note: string;
   source: string;
+  /** 缺省视为 any（向后兼容旧数据） */
+  chain?: BlacklistChain;
 }
 
 const FILE = path.join(process.cwd(), 'data', 'blacklist.json');
@@ -21,6 +26,11 @@ export function readBlacklist(): BlacklistEntry[] {
   return [];
 }
 
-export function findInBlacklist(address: string): BlacklistEntry | null {
-  return readBlacklist().find((e) => e.address === address) || null;
+/** 命中逻辑：地址相等，且条目标记链为 any / 缺省 / 与当前链一致 */
+export function findInBlacklist(address: string, chain?: ChainId): BlacklistEntry | null {
+  return (
+    readBlacklist().find(
+      (e) => e.address === address && (!e.chain || e.chain === 'any' || e.chain === chain)
+    ) || null
+  );
 }

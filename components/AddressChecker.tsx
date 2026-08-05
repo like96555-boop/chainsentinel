@@ -1,14 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, ShieldAlert, ShieldQuestion, Search, Loader2, ExternalLink } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, ShieldQuestion, Search, Loader2, ExternalLink, RotateCcw, History } from 'lucide-react';
+
+type ChainId = 'tron' | 'btc' | 'eth';
 
 interface CheckResult {
+  chain?: ChainId;
   level: 'red' | 'yellow' | 'green';
   score: number;
   reasons: string[];
   evidenceLinks: string[];
+}
+
+interface RecentItem {
+  address: string;
+  chain: ChainId;
+  level: 'red' | 'yellow' | 'green';
+  at: number;
 }
 
 const LEVEL_UI = {
@@ -35,15 +45,49 @@ const LEVEL_UI = {
   },
 } as const;
 
+const CHAIN_META: Record<ChainId, { label: string; cls: string }> = {
+  tron: { label: 'TRON', cls: 'border-red-400/40 bg-red-400/10 text-red-300' },
+  btc: { label: 'BTC', cls: 'border-orange-400/40 bg-orange-400/10 text-orange-300' },
+  eth: { label: 'ETH', cls: 'border-indigo-400/40 bg-indigo-400/10 text-indigo-300' },
+};
+
+const RECENT_KEY = 'cs_recent_checks';
+
+function loadRecent(): RecentItem[] {
+  try {
+    const raw = localStorage.getItem(RECENT_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.slice(0, 5) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRecent(item: RecentItem) {
+  try {
+    const list = loadRecent().filter((r) => r.address !== item.address);
+    list.unshift(item);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, 5)));
+  } catch {
+    /* 隐私模式等场景下静默失败 */
+  }
+}
+
 export default function AddressChecker() {
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CheckResult | null>(null);
   const [error, setError] = useState('');
+  const [recent, setRecent] = useState<RecentItem[]>([]);
 
-  async function check() {
-    const a = address.trim();
+  useEffect(() => {
+    setRecent(loadRecent());
+  }, []);
+
+  async function check(target?: string) {
+    const a = (target ?? address).trim();
     if (!a || loading) return;
+    if (target) setAddress(target);
     setLoading(true);
     setError('');
     setResult(null);
@@ -57,7 +101,12 @@ export default function AddressChecker() {
       if (!res.ok) {
         setError(json?.error || `查询失败（HTTP ${res.status}）`);
       } else {
-        setResult(json as CheckResult);
+        const r = json as CheckResult;
+        setResult(r);
+        if (r.chain) {
+          saveRecent({ address: a, chain: r.chain, level: r.level, at: Date.now() });
+          setRecent(loadRecent());
+        }
       }
     } catch {
       setError('网络异常，请稍后再试。');
@@ -66,7 +115,14 @@ export default function AddressChecker() {
     }
   }
 
+  function reset() {
+    setResult(null);
+    setError('');
+    setAddress('');
+  }
+
   const ui = result ? LEVEL_UI[result.level] : null;
+  const chainMeta = result?.chain ? CHAIN_META[result.chain] : null;
 
   return (
     <div className="w-full max-w-2xl">
@@ -75,11 +131,11 @@ export default function AddressChecker() {
           value={address}
           onChange={(e) => setAddress(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && check()}
-          placeholder="粘贴 TRON 地址（T 开头 34 位），立即免费检测"
+          placeholder="支持 TRON / BTC / ETH 地址，粘贴立即免费检测"
           className="flex-1 bg-transparent px-4 py-3.5 text-sm outline-none placeholder:text-slate-500"
         />
         <button
-          onClick={check}
+          onClick={() => check()}
           disabled={loading}
           className="flex items-center gap-2 bg-neon-cyan/90 px-5 text-sm font-semibold text-cyber-950 transition hover:bg-neon-cyan disabled:opacity-50"
         >
@@ -87,6 +143,34 @@ export default function AddressChecker() {
           {loading ? '扫描中' : '免费检测'}
         </button>
       </div>
+
+      {/* 最近查询记录（本地存储，点击可复查） */}
+      {recent.length > 0 && !result && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-1 text-xs text-slate-500">
+            <History size={12} /> 最近查询
+          </span>
+          {recent.map((r) => (
+            <button
+              key={r.address}
+              onClick={() => check(r.address)}
+              disabled={loading}
+              title={r.address}
+              className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition hover:border-neon-cyan/60 disabled:opacity-40 ${
+                CHAIN_META[r.chain]?.cls || 'border-cyber-700 text-slate-300'
+              }`}
+            >
+              <span className="font-semibold">{CHAIN_META[r.chain]?.label}</span>
+              <span className="max-w-[120px] truncate">{r.address}</span>
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  r.level === 'green' ? 'bg-neon-green' : r.level === 'yellow' ? 'bg-neon-yellow' : 'bg-neon-red'
+                }`}
+              />
+            </button>
+          ))}
+        </div>
+      )}
 
       {error && <p className="mt-3 text-sm text-neon-red">{error}</p>}
 
@@ -102,8 +186,15 @@ export default function AddressChecker() {
             <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 animate-scan-line bg-gradient-to-b from-transparent via-neon-cyan/10 to-transparent" />
             <div className="flex items-center gap-3">
               <ui.icon size={30} className={ui.text} />
-              <div>
-                <p className={`text-lg font-bold ${ui.text}`}>{ui.label}</p>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className={`text-lg font-bold ${ui.text}`}>{ui.label}</p>
+                  {chainMeta && (
+                    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${chainMeta.cls}`}>
+                      {chainMeta.label}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-slate-400">安全评分 {result.score}/100</p>
               </div>
             </div>
@@ -115,7 +206,7 @@ export default function AddressChecker() {
                 </li>
               ))}
             </ul>
-            <div className="mt-4 flex flex-wrap gap-3">
+            <div className="mt-4 flex flex-wrap items-center gap-3">
               {result.evidenceLinks.map((l) => (
                 <a
                   key={l}
@@ -127,6 +218,12 @@ export default function AddressChecker() {
                   链上证据 <ExternalLink size={12} />
                 </a>
               ))}
+              <button
+                onClick={reset}
+                className="ml-auto flex items-center gap-1.5 rounded-lg border border-cyber-700 px-3 py-1.5 text-xs text-slate-300 transition hover:border-neon-cyan/60 hover:text-neon-cyan"
+              >
+                <RotateCcw size={12} /> 再查一个
+              </button>
             </div>
           </motion.div>
         )}

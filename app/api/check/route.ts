@@ -3,6 +3,14 @@ import { checkSchema } from '@/lib/validation';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { findInBlacklist } from '@/lib/blacklist';
 import { scoreAddress } from '@/lib/tron';
+import {
+  detectChain,
+  scoreBtcAddress,
+  scoreEthAddress,
+  explorerAddressUrl,
+  SUPPORTED_FORMATS_HINT,
+  type ChainId,
+} from '@/lib/chains';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,12 +36,19 @@ export async function POST(req: Request) {
     );
   }
 
-  const { address } = parsed.data;
+  const address = parsed.data.address.trim();
 
-  // 黑名单命中 = 红色短路
-  const hit = findInBlacklist(address);
+  // 1) 识别链
+  const chain: ChainId | null = detectChain(address);
+  if (!chain) {
+    return NextResponse.json({ error: SUPPORTED_FORMATS_HINT }, { status: 400 });
+  }
+
+  // 2) 黑名单命中 = 红色短路（按链匹配或 any）
+  const hit = findInBlacklist(address, chain);
   if (hit) {
     return NextResponse.json({
+      chain,
       level: 'red',
       score: 5,
       reasons: [
@@ -41,13 +56,26 @@ export async function POST(req: Request) {
         `标签备注：${hit.note}`,
         '建议立即停止与该地址的一切资金往来。',
       ],
-      evidenceLinks: [`https://tronscan.org/#/address/${address}`],
+      evidenceLinks: [explorerAddressUrl(chain, address)],
       blacklist: { label: hit.label, source: hit.source },
       stats: null,
-      trongridReachable: true,
+      upstreamReachable: true,
     });
   }
 
-  const result = await scoreAddress(address);
-  return NextResponse.json(result);
+  // 3) 分派到对应链分析器
+  if (chain === 'tron') {
+    const r = await scoreAddress(address);
+    return NextResponse.json({
+      chain,
+      level: r.level,
+      score: r.score,
+      reasons: r.reasons,
+      evidenceLinks: r.evidenceLinks,
+      stats: r.stats ?? null,
+      upstreamReachable: r.trongridReachable,
+    });
+  }
+  const r = chain === 'btc' ? await scoreBtcAddress(address) : await scoreEthAddress(address);
+  return NextResponse.json(r);
 }

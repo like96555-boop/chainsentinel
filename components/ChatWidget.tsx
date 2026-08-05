@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, Tag } from 'lucide-react';
 
 interface Msg {
   role: 'user' | 'bot';
@@ -10,6 +10,9 @@ interface Msg {
 }
 
 const QUICK = ['这是什么产品', '多少钱', '怎么接入'];
+
+// 回答涉及价格时，底部常驻「查看定价」锚点
+const PRICE_RE = /价格|定价|多少钱|费用|¥|年费|收费/;
 
 export default function ChatWidget() {
   const [open, setOpen] = useState(false);
@@ -19,6 +22,17 @@ export default function ChatWidget() {
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
+
+  // 外部联动（如 RWA 表单提交成功后自动打开并预填）
+  useEffect(() => {
+    function onOpen(e: Event) {
+      const prefill = (e as CustomEvent<{ prefill?: string }>).detail?.prefill;
+      setOpen(true);
+      if (prefill) setInput(prefill);
+    }
+    window.addEventListener('cs:open-chat', onOpen);
+    return () => window.removeEventListener('cs:open-chat', onOpen);
+  }, []);
 
   useEffect(() => {
     boxRef.current?.scrollTo({ top: boxRef.current.scrollHeight, behavior: 'smooth' });
@@ -124,6 +138,19 @@ export default function ChatWidget() {
                 </button>
               ))}
             </div>
+
+            {/* 涉及价格的回答 → 常驻「查看定价」转化锚点 */}
+            {msgs.some((m) => m.role === 'bot' && PRICE_RE.test(m.text)) && (
+              <div className="border-t border-cyber-700/60 px-3 py-1.5">
+                <a
+                  href="#pricing"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-1.5 text-xs text-neon-yellow transition hover:text-neon-cyan"
+                >
+                  <Tag size={12} /> 查看定价，锁定专业版优惠 →
+                </a>
+              </div>
+            )}
 
             <div className="flex items-center gap-2 border-t border-cyber-700 p-2.5">
               <input

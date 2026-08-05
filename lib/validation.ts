@@ -5,8 +5,9 @@ export const tronAddressSchema = z
   .string()
   .regex(/^T[1-9A-HJ-NP-Za-km-z]{33}$/, '无效的 TRON 地址格式（应为 T 开头 34 位 base58）');
 
+// 多链检测：此处只做类型与长度约束，具体链格式由 lib/chains.ts 识别后给出 400 提示
 export const checkSchema = z.object({
-  address: tronAddressSchema,
+  address: z.string().min(1, '地址不能为空').max(128, '地址过长'),
 });
 
 export const chatSchema = z.object({

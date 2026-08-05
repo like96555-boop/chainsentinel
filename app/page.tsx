@@ -43,6 +43,12 @@ function LeadForm() {
       } else {
         setState('ok');
         setMsg(json?.message || '预约成功');
+        // 销售闭环：成功后自动打开右下角 AI 客服并预填消息
+        setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent('cs:open-chat', { detail: { prefill: '我刚预约了咨询' } })
+          );
+        }, 900);
       }
     } catch {
       setState('err');
@@ -76,7 +82,25 @@ function LeadForm() {
         {state === 'busy' && <Loader2 size={15} className="animate-spin" />}
         预约合规顾问
       </button>
-      {msg && <p className={`text-sm ${state === 'ok' ? 'text-neon-green' : 'text-neon-red'}`}>{msg}</p>}
+      {state === 'ok' && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 260, damping: 16 }}
+          className="flex items-center gap-2"
+        >
+          <motion.span
+            initial={{ scale: 0, rotate: -90 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 14, delay: 0.1 }}
+            className="flex h-6 w-6 items-center justify-center rounded-full bg-neon-green/20"
+          >
+            <Check size={14} className="text-neon-green" />
+          </motion.span>
+          <p className="text-sm text-neon-green">{msg}</p>
+        </motion.div>
+      )}
+      {state === 'err' && msg && <p className="text-sm text-neon-red">{msg}</p>}
     </div>
   );
 }
@@ -142,7 +166,7 @@ export default function LandingPage() {
           animate={{ opacity: 1 }}
           className="mb-4 rounded-full border border-neon-cyan/30 bg-neon-cyan/10 px-4 py-1 text-xs text-neon-cyan"
         >
-          TRON 网络 · USDT 收款风控 SaaS
+          TRON · BTC · ETH 多链 · 收款风控 SaaS
         </motion.p>
         <motion.h1
           initial={{ opacity: 0, y: 24 }}
@@ -212,7 +236,7 @@ export default function LandingPage() {
       </section>
 
       {/* 定价区 */}
-      <section className="mx-auto max-w-5xl px-6 py-14">
+      <section id="pricing" className="mx-auto max-w-5xl px-6 py-14">
         <motion.h2 {...fadeUp} className="text-center text-3xl font-bold">
           透明定价
         </motion.h2>
