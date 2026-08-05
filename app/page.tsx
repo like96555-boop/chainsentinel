@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import AddressChecker from '@/components/AddressChecker';
 import Counter from '@/components/Counter';
+import MarketTicker from '@/components/MarketTicker';
 
 const fadeUp = {
   initial: { opacity: 0, y: 32 },
@@ -195,6 +196,9 @@ export default function LandingPage() {
         </motion.div>
         <p className="mt-3 text-xs text-slate-500">免注册 · 每 IP 每分钟 10 次 · 结果仅供参考不构成法律意见</p>
       </section>
+
+      {/* 主流币行情条 */}
+      <MarketTicker />
 
       {/* 信任区 */}
       <motion.section {...fadeUp} className="mx-auto max-w-5xl px-6 py-14">
