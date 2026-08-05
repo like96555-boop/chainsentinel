@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import {
   Radar,
   ShieldCheck,
+  ShieldAlert,
+  TrendingUp,
   FileBarChart,
   Lock,
   Check,
@@ -236,6 +238,38 @@ export default function LandingPage() {
               <p className="mt-2 text-sm leading-relaxed text-slate-400">{f.desc}</p>
             </motion.div>
           ))}
+        </div>
+
+        {/* 公开数据入口：风险警示榜 + 聪明钱 */}
+        <div className="mt-6 grid gap-6 sm:grid-cols-2">
+          <motion.a
+            {...fadeUp}
+            href="/alerts"
+            className="group flex items-center gap-4 rounded-2xl border border-cyber-700 bg-cyber-900/60 p-6 transition hover:border-neon-red/50"
+          >
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-neon-red/10">
+              <ShieldAlert size={24} className="text-neon-red" />
+            </span>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold">链上风险警示榜</h3>
+              <p className="mt-1 text-sm text-slate-400">免费公开的链上风险情报：钓鱼归集 · 洗钱通道 · 混币入口 · 诈骗资金</p>
+            </div>
+            <span className="text-neon-cyan transition group-hover:translate-x-1">→</span>
+          </motion.a>
+          <motion.a
+            {...fadeUp}
+            href="/smart-money"
+            className="group flex items-center gap-4 rounded-2xl border border-cyber-700 bg-cyber-900/60 p-6 transition hover:border-neon-yellow/50"
+          >
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-neon-yellow/10">
+              <TrendingUp size={24} className="text-neon-yellow" />
+            </span>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold">聪明钱追踪</h3>
+              <p className="mt-1 text-sm text-slate-400">机构与巨鲸的真实链上足迹，免费查看前 3 个监控地址</p>
+            </div>
+            <span className="text-neon-cyan transition group-hover:translate-x-1">→</span>
+          </motion.a>
         </div>
       </section>
 

@@ -90,6 +90,12 @@ export default function SmartMoneyPage() {
             <Crown size={16} />
             升级专业版
           </a>
+          <a
+            href="/smart-money"
+            className="mt-3 flex items-center gap-1.5 text-xs text-neon-cyan hover:underline"
+          >
+            🎁 已开放免费公开版：查看真实链上聪明钱动向（TRON / BTC / ETH）→
+          </a>
         </motion.div>
       </div>
 

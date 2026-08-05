@@ -11,6 +11,12 @@ import {
   Save,
   RefreshCw,
   Lock,
+  TrendingUp,
+  Plus,
+  Pencil,
+  Power,
+  Trash2,
+  X,
 } from 'lucide-react';
 
 interface MaskedSecret {
@@ -18,6 +24,14 @@ interface MaskedSecret {
   configured: boolean;
   source: 'store' | 'env' | 'none';
   masked: string;
+}
+
+interface SmItem {
+  address: string;
+  chain: 'tron' | 'btc' | 'eth';
+  name: string;
+  enabled: boolean;
+  demo: boolean;
 }
 
 interface Status {
@@ -46,6 +60,18 @@ export default function AdminPage() {
   const [status, setStatus] = useState<Status | null>(null);
   const [notice, setNotice] = useState('');
 
+  // 聪明钱监控
+  const [smItems, setSmItems] = useState<SmItem[]>([]);
+  const [smForm, setSmForm] = useState<{ address: string; chain: 'tron' | 'btc' | 'eth'; name: string; enabled: boolean }>({
+    address: '',
+    chain: 'tron',
+    name: '',
+    enabled: true,
+  });
+  const [editingAddr, setEditingAddr] = useState<string | null>(null);
+  const [smBusy, setSmBusy] = useState(false);
+  const [smNotice, setSmNotice] = useState('');
+
   const loadAll = useCallback(async () => {
     const [sRes, stRes] = await Promise.all([fetch('/api/admin/secrets'), fetch('/api/admin/status')]);
     if (sRes.status === 401 || stRes.status === 401) {
@@ -56,6 +82,16 @@ export default function AdminPage() {
     const sJson = await sRes.json();
     setSecrets(sJson.secrets || []);
     setStatus(await stRes.json());
+  }, []);
+
+  const loadSmartMoney = useCallback(async () => {
+    const res = await fetch('/api/admin/smart-money');
+    if (res.status === 401) {
+      setAuthed(false);
+      return;
+    }
+    const json = await res.json();
+    setSmItems(json.items || []);
   }, []);
 
   useEffect(() => {
@@ -77,6 +113,7 @@ export default function AdminPage() {
       } else {
         setPassword('');
         await loadAll();
+        await loadSmartMoney();
       }
     } finally {
       setBusy(false);
@@ -116,6 +153,71 @@ export default function AdminPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function smRequest(method: 'POST' | 'PUT' | 'DELETE', body?: unknown) {
+    setSmBusy(true);
+    setSmNotice('');
+    try {
+      const opts: RequestInit = { method, headers: { 'Content-Type': 'application/json' } };
+      if (body !== undefined) opts.body = JSON.stringify(body);
+      const url = method === 'DELETE' && body ? `/api/admin/smart-money?address=${encodeURIComponent(String(body))}` : '/api/admin/smart-money';
+      const res = await fetch(url, opts);
+      const j = await res.json();
+      if (!res.ok) {
+        setSmNotice(`⚠️ ${j?.error || `操作失败（HTTP ${res.status}）`}`);
+        return false;
+      }
+      setSmItems(j.items || []);
+      setSmNotice('✅ 已保存');
+      return true;
+    } catch {
+      setSmNotice('⚠️ 网络异常，操作未完成');
+      return false;
+    } finally {
+      setSmBusy(false);
+    }
+  }
+
+  async function addOrSaveSm() {
+    if (!smForm.address.trim() || !smForm.name.trim()) {
+      setSmNotice('⚠️ 请填写地址与名称');
+      return;
+    }
+    if (editingAddr) {
+      const ok = await smRequest('PUT', {
+        address: editingAddr,
+        chain: smForm.chain,
+        name: smForm.name,
+        enabled: smForm.enabled,
+      });
+      if (ok) {
+        setEditingAddr(null);
+        setSmForm({ address: '', chain: 'tron', name: '', enabled: true });
+      }
+    } else {
+      const ok = await smRequest('POST', smForm);
+      if (ok) setSmForm({ address: '', chain: 'tron', name: '', enabled: true });
+    }
+  }
+
+  function editSm(item: SmItem) {
+    setEditingAddr(item.address);
+    setSmForm({ address: item.address, chain: item.chain, name: item.name, enabled: item.enabled });
+  }
+
+  function cancelEdit() {
+    setEditingAddr(null);
+    setSmForm({ address: '', chain: 'tron', name: '', enabled: true });
+  }
+
+  async function toggleSm(item: SmItem) {
+    await smRequest('PUT', { address: item.address, enabled: !item.enabled });
+  }
+
+  async function deleteSm(item: SmItem) {
+    if (!window.confirm(`确认删除监控地址 ${item.name}（${item.address.slice(0, 10)}…）？`)) return;
+    await smRequest('DELETE', item.address);
   }
 
   if (authed === null) {
@@ -166,7 +268,10 @@ export default function AdminPage() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => loadAll()}
+            onClick={() => {
+              loadAll();
+              loadSmartMoney();
+            }}
             className="flex items-center gap-1.5 rounded-lg border border-cyber-700 px-3 py-2 text-xs text-slate-300 hover:border-neon-cyan/60"
           >
             <RefreshCw size={13} /> 刷新
@@ -293,6 +398,151 @@ export default function AdminPage() {
             </tbody>
           </table>
         )}
+      </section>
+
+      {/* 聪明钱监控 */}
+      <section className="mt-6 rounded-2xl border border-cyber-700 bg-cyber-900/60 p-6">
+        <div className="flex items-center gap-2">
+          <TrendingUp size={18} className="text-neon-yellow" />
+          <h2 className="text-lg font-bold">聪明钱监控</h2>
+          <span className="text-xs text-slate-500">（{smItems.length} 个地址 · 写回 data/smartmoney.json）</span>
+        </div>
+
+        {/* 新增 / 编辑表单 */}
+        <div className="mt-4 grid gap-3 rounded-xl border border-cyber-700 bg-cyber-950/60 p-4 sm:grid-cols-[1fr_110px_1fr_auto_auto] sm:items-center">
+          <input
+            value={smForm.address}
+            onChange={(e) => setSmForm({ ...smForm, address: e.target.value })}
+            placeholder={editingAddr ? '地址（编辑时不可改）' : 'TRON / BTC / ETH 地址'}
+            disabled={!!editingAddr}
+            className="rounded-lg border border-cyber-700 bg-cyber-950 px-3 py-2 font-mono text-xs outline-none focus:border-neon-cyan/60 disabled:opacity-50"
+          />
+          <select
+            value={smForm.chain}
+            onChange={(e) => setSmForm({ ...smForm, chain: e.target.value as SmItem['chain'] })}
+            className="rounded-lg border border-cyber-700 bg-cyber-950 px-3 py-2 text-xs outline-none focus:border-neon-cyan/60"
+          >
+            <option value="tron">TRON</option>
+            <option value="btc">BTC</option>
+            <option value="eth">ETH</option>
+          </select>
+          <input
+            value={smForm.name}
+            onChange={(e) => setSmForm({ ...smForm, name: e.target.value })}
+            placeholder="中文标签，如：巨鲸·XX"
+            className="rounded-lg border border-cyber-700 bg-cyber-950 px-3 py-2 text-xs outline-none focus:border-neon-cyan/60"
+          />
+          <label className="flex items-center gap-2 text-xs text-slate-300">
+            <input
+              type="checkbox"
+              checked={smForm.enabled}
+              onChange={(e) => setSmForm({ ...smForm, enabled: e.target.checked })}
+              className="accent-neon-cyan"
+            />
+            启用
+          </label>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={addOrSaveSm}
+              disabled={smBusy}
+              className="flex items-center gap-1.5 rounded-lg bg-neon-cyan/90 px-3.5 py-2 text-xs font-semibold text-cyber-950 transition hover:bg-neon-cyan disabled:opacity-50 active:scale-95"
+            >
+              {smBusy ? <Loader2 size={13} className="animate-spin" /> : editingAddr ? <Save size={13} /> : <Plus size={13} />}
+              {editingAddr ? '保存修改' : '添加监控'}
+            </button>
+            {editingAddr && (
+              <button
+                onClick={cancelEdit}
+                className="flex items-center gap-1 rounded-lg border border-cyber-700 px-2.5 py-2 text-xs text-slate-300 transition hover:border-neon-red/60 hover:text-neon-red active:scale-95"
+              >
+                <X size={13} /> 取消
+              </button>
+            )}
+          </div>
+        </div>
+        {smNotice && <p className={`mt-2 text-xs ${smNotice.startsWith('✅') ? 'text-neon-green' : 'text-neon-yellow'}`}>{smNotice}</p>}
+
+        {/* 监控列表表格 */}
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[640px] text-left text-sm">
+            <thead>
+              <tr className="text-xs text-slate-500">
+                <th className="py-2 pr-4">名称</th>
+                <th className="py-2 pr-4">链</th>
+                <th className="py-2 pr-4">地址</th>
+                <th className="py-2 pr-4">状态</th>
+                <th className="py-2 pr-4">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {smItems.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-6 text-center text-sm text-slate-500">
+                    暂无监控地址，使用上方表单添加。
+                  </td>
+                </tr>
+              )}
+              {smItems.map((item) => (
+                <tr key={item.address} className="border-t border-cyber-800 text-slate-300">
+                  <td className="py-2.5 pr-4">
+                    <span className="flex items-center gap-1.5">
+                      {item.name}
+                      {item.demo && (
+                        <span className="rounded-full border border-slate-600/60 px-1.5 py-px text-[9px] text-slate-500">演示</span>
+                      )}
+                    </span>
+                  </td>
+                  <td className="py-2.5 pr-4">
+                    <span className="rounded-full border border-cyber-700 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-400">
+                      {item.chain}
+                    </span>
+                  </td>
+                  <td className="max-w-[240px] truncate py-2.5 pr-4 font-mono text-xs text-slate-400" title={item.address}>
+                    {item.address}
+                  </td>
+                  <td className="py-2.5 pr-4">
+                    <span className={`inline-flex items-center gap-1.5 text-xs ${item.enabled ? 'text-neon-green' : 'text-slate-500'}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${item.enabled ? 'bg-neon-green' : 'bg-slate-600'}`} />
+                      {item.enabled ? '启用' : '停用'}
+                    </span>
+                  </td>
+                  <td className="py-2.5">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => editSm(item)}
+                        title="编辑"
+                        className="rounded-md border border-cyber-700 p-1.5 text-slate-400 transition hover:border-neon-cyan/60 hover:text-neon-cyan active:scale-90"
+                      >
+                        <Pencil size={12} />
+                      </button>
+                      <button
+                        onClick={() => toggleSm(item)}
+                        title={item.enabled ? '停用' : '启用'}
+                        className={`rounded-md border p-1.5 transition active:scale-90 ${
+                          item.enabled
+                            ? 'border-cyber-700 text-slate-400 hover:border-neon-yellow/60 hover:text-neon-yellow'
+                            : 'border-neon-green/40 text-neon-green hover:border-neon-green'
+                        }`}
+                      >
+                        <Power size={12} />
+                      </button>
+                      <button
+                        onClick={() => deleteSm(item)}
+                        title="删除"
+                        className="rounded-md border border-cyber-700 p-1.5 text-slate-400 transition hover:border-neon-red/60 hover:text-neon-red active:scale-90"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-3 text-xs text-slate-500">
+          公开页 /smart-money 实时读取本列表；停用后该地址立即从公开页消失。链上数据来自公共 RPC / Blockstream / TronGrid。
+        </p>
       </section>
     </main>
   );

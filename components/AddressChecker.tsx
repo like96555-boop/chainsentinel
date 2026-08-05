@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, ShieldAlert, ShieldQuestion, Search, Loader2, ExternalLink, RotateCcw, History } from 'lucide-react';
 
@@ -79,9 +79,19 @@ export default function AddressChecker() {
   const [result, setResult] = useState<CheckResult | null>(null);
   const [error, setError] = useState('');
   const [recent, setRecent] = useState<RecentItem[]>([]);
+  const prefilledRef = useRef(false);
 
   useEffect(() => {
     setRecent(loadRecent());
+  }, []);
+
+  // 支持 /?addr=<地址> 自动填入并核查（警示榜「核查此地址」入口）
+  useEffect(() => {
+    if (prefilledRef.current) return;
+    prefilledRef.current = true;
+    const a = new URLSearchParams(window.location.search).get('addr')?.trim();
+    if (a) check(a);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function check(target?: string) {

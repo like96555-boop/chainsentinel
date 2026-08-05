@@ -151,7 +151,7 @@ export async function scoreBtcAddress(address: string): Promise<ChainCheckResult
 
 // 首选 llamarpc，cloudflare 兜底（任务指定）；实测 llamarpc 偶发 521、cloudflare 偶发 JSON-RPC 内部错误，
 // 故追加 publicnode / 1rpc 两个免费无 key 公共节点作为最终兜底。
-const ETH_RPCS = [
+export const ETH_RPCS = [
   'https://eth.llamarpc.com',
   'https://cloudflare-eth.com',
   'https://ethereum-rpc.publicnode.com',

@@ -1,0 +1,74 @@
+[
+  {
+    "address": "TDemoPhishNet555555555555555555555",
+    "chain": "tron",
+    "type": "phishing",
+    "firstSeen": "2024-03-12T08:30:00Z",
+    "txCount": 1240,
+    "notes": "某钓鱼站点的资金归集池，聚集超千笔小额转入，链上特征与已知钓鱼团伙一致。",
+    "demo": true
+  },
+  {
+    "address": "TDemoLaundry4444444444444444444444",
+    "chain": "tron",
+    "type": "laundering",
+    "firstSeen": "2024-06-02T14:20:00Z",
+    "txCount": 3860,
+    "notes": "高流转洗钱通道：单地址日转账数百笔、平均停留不足 2 分钟即转出。",
+    "demo": true
+  },
+  {
+    "address": "TDemoMixerGate66666666666666666666",
+    "chain": "tron",
+    "type": "mixer",
+    "firstSeen": "2024-09-18T03:05:00Z",
+    "txCount": 920,
+    "notes": "混币服务入口地址，接收多来源资金后拆散分批转出，难以追踪。",
+    "demo": true
+  },
+  {
+    "address": "TDemoScamBank777777777777777777777",
+    "chain": "tron",
+    "type": "scam",
+    "firstSeen": "2025-01-09T11:40:00Z",
+    "txCount": 2140,
+    "notes": "投资骗局收款地址：以高息返利话术诱导转入，资金已多级转移。",
+    "demo": true
+  },
+  {
+    "address": "1DemoMixerGateAbcdefghij1234567891",
+    "chain": "btc",
+    "type": "mixer",
+    "firstSeen": "2024-02-27T19:15:00Z",
+    "txCount": 57,
+    "notes": "BTC 混币器网关：单笔输入多笔输出的拆分模式典型。",
+    "demo": true
+  },
+  {
+    "address": "1DemoRiskAddrAbcdefghij1234567891",
+    "chain": "btc",
+    "type": "scam",
+    "firstSeen": "2025-04-15T06:55:00Z",
+    "txCount": 12,
+    "notes": "勒索/诈骗资金收款地址，与多个投诉工单关联。",
+    "demo": true
+  },
+  {
+    "address": "0xAbC1234567890AbC1234567890AbC1234567890a",
+    "chain": "eth",
+    "type": "phishing",
+    "firstSeen": "2024-11-30T22:10:00Z",
+    "txCount": 482,
+    "notes": "ETH 侧钓鱼归集地址：空投诱导授权后批量转走用户资产。",
+    "demo": true
+  },
+  {
+    "address": "0xF00d123456F00d123456F00d123456F00d123a",
+    "chain": "eth",
+    "type": "mixer",
+    "firstSeen": "2025-02-08T09:25:00Z",
+    "txCount": 1130,
+    "notes": "ETH 混币入口：Tornado 类协议上游中转，频繁换号规避追踪。",
+    "demo": true
+  }
+]

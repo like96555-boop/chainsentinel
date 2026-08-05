@@ -185,6 +185,36 @@ async function main() {
     );
   }
 
+  // ── 8. 风险警示榜（分页一致性 + 链筛选） ────────────────────────
+  {
+    const ip = groupIp();
+    const all = await fetch(`${BASE}/api/alerts?page=1&pageSize=50`, { headers: { 'X-Forwarded-For': ip } });
+    const btc = await fetch(`${BASE}/api/alerts?chain=btc&pageSize=50`, { headers: { 'X-Forwarded-For': ip } });
+    const jAll = await all.json().catch(() => null);
+    const jBtc = await btc.json().catch(() => null);
+    const btcAllBtc = Array.isArray(jBtc?.items) && jBtc.items.every((i) => i.chain === 'btc');
+    report(
+      '警示榜：默认返回 + BTC 筛选全链一致',
+      all.status === 200 && btc.status === 200 && jAll?.total > 0 && btcAllBtc && jBtc.total > 0,
+      `all total=${jAll?.total} | btc total=${jBtc?.total} 全为BTC=${btcAllBtc}`
+    );
+  }
+
+  // ── 9. 聪明钱追踪（真实链上数据 + Feature Gate 字段） ───────────
+  {
+    const ip = groupIp();
+    const r = await fetch(`${BASE}/api/smart-money/list`, { headers: { 'X-Forwarded-For': ip } });
+    const j = await r.json().catch(() => null);
+    const items = Array.isArray(j?.items) ? j.items : [];
+    const vitalik = items.find((i) => i.name && i.name.includes('Vitalik')) || items.find((i) => i.chain === 'eth');
+    const hasRealData = items.length > 0 && items.some((i) => (i.balanceUsd ?? i.balance ?? 0) > 0 || (i.txCount ?? 0) > 1000);
+    report(
+      '聪明钱列表：真实链上数据返回（Vitalik 余额>0）',
+      r.status === 200 && hasRealData && !!vitalik,
+      `HTTP ${r.status} items=${items.length} Vitalik balance=${vitalik?.balance ?? '?'} ${vitalik?.chain ?? '?'} degraded=${vitalik?.degraded ?? '?'}`
+    );
+  }
+
   const pass = results.filter((r) => r.ok).length;
   console.log(`\n=== 回归结果：${pass}/${results.length} 通过 ===\n`);
   process.exit(pass === results.length ? 0 : 1);
