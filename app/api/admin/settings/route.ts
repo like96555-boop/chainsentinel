@@ -3,6 +3,7 @@ import { isAuthed } from '@/lib/session';
 import fs from 'fs';
 import path from 'path';
 import { z } from 'zod';
+import { logAudit } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,6 +38,7 @@ export async function PUT(req: Request) {
     const tmp = SETTINGS_PATH + '.tmp';
     fs.writeFileSync(tmp, JSON.stringify(parsed.data, null, 2), 'utf8');
     fs.renameSync(tmp, SETTINGS_PATH);
+    logAudit('站点设置修改', `siteName=${parsed.data.siteName}`, req);
     return NextResponse.json({ ok: true, settings: parsed.data });
   } catch {
     return NextResponse.json({ error: '写入失败' }, { status: 500 });

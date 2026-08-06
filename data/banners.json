@@ -1,17 +1,4 @@
 {
-  "items": [
-    {
-      "id": "demo-banner-001",
-      "position": "home-top",
-      "title": "专业版限时 8 折",
-      "subtitle": "新客户首年优惠，送一对一接入支持",
-      "emoji": "🎉",
-      "bg": "from-cyan-500/20 to-blue-600/10",
-      "linkUrl": "/#pricing",
-      "enabled": true,
-      "sort": 1,
-      "createdAt": 1786029621349
-    }
-  ],
-  "updatedAt": 1786029621349
+  "items": [],
+  "updatedAt": 0
 }

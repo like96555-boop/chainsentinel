@@ -163,11 +163,6 @@ const PLANS = [
 export default function LandingPage() {
   return (
     <main className="grid-bg">
-      {/* 营销横幅：首页顶部 */}
-      <div className="pt-6">
-        <BannerCarousel position="home-top" />
-      </div>
-
       {/* Hero */}
       <section className="relative mx-auto flex min-h-[88vh] max-w-5xl flex-col items-center justify-center px-6 pt-16 text-center">
         <motion.p

@@ -34,6 +34,25 @@ export function writeStore<T>(fileName: string, items: T[]): void {
   fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
   fs.renameSync(tmp, p);
   cache.set(fileName, { at: Date.now(), data });
+  // 模块配置写入即记审计（覆盖所有走本函数的模块增删改）
+  try {
+    const auditPath = path.join(process.cwd(), 'data', 'audit-log.json');
+    let entries: { ts: number; action: string; detail: string; ip: string }[] = [];
+    if (fs.existsSync(auditPath)) {
+      try {
+        entries = JSON.parse(fs.readFileSync(auditPath, 'utf8')).items || [];
+      } catch {
+        entries = [];
+      }
+    }
+    entries.unshift({ ts: Date.now(), action: '配置变更', detail: `${fileName}（${items.length} 条）`, ip: 'admin-api' });
+    entries = entries.slice(0, 200);
+    const tmp2 = auditPath + '.tmp';
+    fs.writeFileSync(tmp2, JSON.stringify({ items: entries, updatedAt: Date.now() }, null, 2), 'utf8');
+    fs.renameSync(tmp2, auditPath);
+  } catch {
+    /* 审计失败不影响主流程 */
+  }
 }
 
 /** 通用 ID 生成 */

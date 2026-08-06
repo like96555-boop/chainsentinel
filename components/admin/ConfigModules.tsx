@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { KeyRound, Webhook as WebhookIcon, Megaphone, Settings2, Plus, Trash2, Power, Copy, Check, TestTube2 } from 'lucide-react';
+import { KeyRound, Webhook as WebhookIcon, Megaphone, Settings2, Plus, Trash2, Power, Copy, Check, TestTube2, ScrollText, ShieldAlert } from 'lucide-react';
 
-export type ConfigTab = 'apikeys' | 'webhooks' | 'banners' | 'settings';
+export type ConfigTab = 'apikeys' | 'webhooks' | 'banners' | 'settings' | 'blacklist' | 'audit';
 
 const inputCls =
   'w-full rounded-lg border border-cyber-700 bg-cyber-950/70 px-3 py-2 text-sm text-slate-200 outline-none focus:border-neon-cyan/60';
@@ -204,7 +204,6 @@ function Webhooks() {
 
 /* ---------------- 营销横幅 ---------------- */
 const POSITIONS = [
-  ['home-top', '首页顶部'],
   ['home-pricing', '首页定价区'],
   ['alerts-top', '警示榜顶部'],
   ['smartmoney-top', '聪明钱页顶部'],
@@ -339,5 +338,118 @@ export default function ConfigModules({ tab }: { tab: ConfigTab }) {
   if (tab === 'apikeys') return <div className="mt-6"><ApiKeys /></div>;
   if (tab === 'webhooks') return <div className="mt-6"><Webhooks /></div>;
   if (tab === 'banners') return <div className="mt-6"><Banners /></div>;
+  if (tab === 'blacklist') return <div className="mt-6"><Blacklist /></div>;
+  if (tab === 'audit') return <div className="mt-6"><AuditLog /></div>;
   return <div className="mt-6"><Settings /></div>;
+}
+
+/* ---------------- 黑名单管理 ---------------- */
+const TYPE_LABELS: Record<string, string> = { phishing: '钓鱼归集', laundering: '洗钱通道', mixer: '混币入口', fraud: '诈骗资金' };
+
+function Blacklist() {
+  const [items, setItems] = useState<any[]>([]);
+  const [form, setForm] = useState<any>({ address: '', chain: 'tron', label: '', type: 'phishing', notes: '' });
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const { json } = await jfetch('/api/admin/blacklist');
+    if (json?.items) setItems(json.items);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  async function save() {
+    if (!form.address.trim() || !form.label.trim()) { setMsg('⚠️ 请填写地址与标签'); return; }
+    const { res, json } = await jfetch('/api/admin/blacklist', 'POST', form);
+    if (res.ok) { setMsg('✅ 已加入黑名单，/api/check 与警示榜即时生效'); setForm({ address: '', chain: 'tron', label: '', type: 'phishing', notes: '' }); load(); }
+    else setMsg(`⚠️ ${json?.error || '添加失败'}`);
+  }
+  async function remove(id: string) {
+    const { json } = await jfetch(`/api/admin/blacklist?id=${id}`, 'DELETE');
+    if (json?.ok) { setMsg('✅ 已移除'); load(); }
+  }
+
+  return (
+    <section className={sectionCls}>
+      <div className="flex items-center gap-2">
+        <ShieldAlert size={18} className="text-neon-red" />
+        <h2 className="text-lg font-bold">黑名单库</h2>
+        <span className="text-xs text-slate-500">风险地址数据源：查询红牌命中 + 警示榜并入展示</span>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <input className={inputCls} placeholder="风险地址（TRON/BTC/ETH）" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+        <input className={inputCls} placeholder="标签（如：2026-08 钓鱼归集）" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} />
+        <div className="grid grid-cols-[1fr_1fr] gap-2">
+          <select className={inputCls} value={form.chain} onChange={(e) => setForm({ ...form, chain: e.target.value })}>
+            <option value="tron">TRON</option>
+            <option value="btc">BTC</option>
+            <option value="eth">ETH</option>
+            <option value="any">任意链</option>
+          </select>
+          <select className={inputCls} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+            {Object.entries(TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </div>
+        <input className={inputCls} placeholder="备注（可选）" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+      </div>
+      <button className={`${btnPrimary} mt-3`} onClick={save}><Plus size={13} /> 加入黑名单</button>
+      <div className="mt-4 space-y-2">
+        {items.length === 0 && <p className="text-xs text-slate-500">黑名单为空。</p>}
+        {items.map((b) => (
+          <div key={b.id} className="flex items-center gap-3 rounded-lg border border-cyber-700 bg-cyber-950/50 px-3 py-2">
+            <span className="w-16 shrink-0 text-xs text-neon-red">{TYPE_LABELS[b.type] || b.type}</span>
+            <span className="font-mono text-xs text-slate-300">{b.address}</span>
+            <span className="hidden truncate text-xs text-slate-500 sm:block">{b.label}</span>
+            <button className={`${btnDanger} ml-auto`} onClick={() => remove(b.id)}><Trash2 size={12} /></button>
+          </div>
+        ))}
+      </div>
+      <Notice msg={msg} />
+    </section>
+  );
+}
+
+/* ---------------- 操作日志 ---------------- */
+function AuditLog() {
+  const [logs, setLogs] = useState<any[]>([]);
+
+  const load = useCallback(async () => {
+    const { json } = await jfetch('/api/admin/audit');
+    if (json?.logs) setLogs(json.logs);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  return (
+    <section className={sectionCls}>
+      <div className="flex items-center gap-2">
+        <ScrollText size={18} className="text-neon-cyan" />
+        <h2 className="text-lg font-bold">操作日志</h2>
+        <span className="text-xs text-slate-500">安全审计：登录/密钥/配置变更，保留最近 200 条</span>
+      </div>
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full text-left text-xs">
+          <thead>
+            <tr className="border-b border-cyber-700 text-slate-500">
+              <th className="py-2 pr-4">时间</th>
+              <th className="py-2 pr-4">操作</th>
+              <th className="py-2 pr-4">详情</th>
+              <th className="py-2">来源 IP</th>
+            </tr>
+          </thead>
+          <tbody>
+            {logs.length === 0 && (
+              <tr><td colSpan={4} className="py-4 text-slate-500">暂无操作记录。</td></tr>
+            )}
+            {logs.map((l, i) => (
+              <tr key={i} className="border-b border-cyber-800/60">
+                <td className="whitespace-nowrap py-2 pr-4 font-mono text-slate-400">{l.time}</td>
+                <td className="py-2 pr-4 text-slate-200">{l.action}</td>
+                <td className="max-w-[320px] truncate py-2 pr-4 text-slate-400">{l.detail}</td>
+                <td className="py-2 font-mono text-slate-500">{l.ip}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
 }

@@ -18,7 +18,12 @@ const FILE = path.join(process.cwd(), 'data', 'blacklist.json');
 export function readBlacklist(): BlacklistEntry[] {
   try {
     if (fs.existsSync(FILE)) {
-      return JSON.parse(fs.readFileSync(FILE, 'utf8')) as BlacklistEntry[];
+      const raw = JSON.parse(fs.readFileSync(FILE, 'utf8')) as unknown;
+      // 兼容两种格式：纯数组（旧）与 {items:[...]}（后台管理模块写入）
+      if (Array.isArray(raw)) return raw as BlacklistEntry[];
+      if (raw && typeof raw === 'object' && Array.isArray((raw as { items?: unknown }).items)) {
+        return (raw as { items: BlacklistEntry[] }).items;
+      }
     }
   } catch (e) {
     console.error('[ChainSentinel] blacklist.json 读取失败。', e);

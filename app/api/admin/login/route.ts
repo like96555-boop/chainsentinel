@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { loginSchema } from '@/lib/validation';
 import { createSessionToken, sessionCookieHeader, verifyAdminPassword } from '@/lib/session';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { logAudit } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -24,8 +25,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: '参数校验失败' }, { status: 400 });
   }
   if (!verifyAdminPassword(parsed.data.password)) {
+    logAudit('登录失败', `IP ${ip} 密码错误`);
     return NextResponse.json({ error: '密码错误' }, { status: 401 });
   }
+  logAudit('登录成功', `IP ${ip}`);
   return new NextResponse(JSON.stringify({ ok: true }), {
     status: 200,
     headers: {

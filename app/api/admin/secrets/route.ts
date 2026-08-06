@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { isAuthed } from '@/lib/session';
 import { getMaskedSecrets, setSecrets, SECRET_KEYS, SecretKey } from '@/lib/secrets';
 import { secretsPutSchema } from '@/lib/validation';
+import { logAudit } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,9 +35,10 @@ export async function PUT(req: Request) {
   }
   try {
     setSecrets(input);
-  } catch (e) {
-    console.error('[ChainSentinel] 密钥写入失败', e);
+    logAudit('密钥变更', `修改了 ${Object.keys(input).filter((k) => input[k as keyof typeof input]).length} 个密钥项`);
+    return NextResponse.json({ ok: true, secrets: getMaskedSecrets() });
+  } catch {
+    console.error('[ChainSentinel] 密钥写入失败');
     return NextResponse.json({ error: '密钥写入失败' }, { status: 500 });
   }
-  return NextResponse.json({ ok: true, secrets: getMaskedSecrets() });
 }
