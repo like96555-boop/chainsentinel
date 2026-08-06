@@ -9,7 +9,7 @@ interface Msg {
   text: string;
 }
 
-const QUICK = ['这是什么产品', '多少钱', '怎么接入'];
+const QUICK_DEFAULT = ['这是什么产品', '多少钱', '怎么接入'];
 
 // 回答涉及价格时，底部常驻「查看定价」锚点
 const PRICE_RE = /价格|定价|多少钱|费用|¥|年费|收费/;
@@ -21,7 +21,25 @@ export default function ChatWidget() {
   ]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [quick, setQuick] = useState<string[]>(QUICK_DEFAULT);
   const boxRef = useRef<HTMLDivElement>(null);
+
+  // 从公开配置端点拉取问候语/快捷问题（管理台可配）
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch('/api/ai-config');
+        if (!r.ok) return;
+        const j = await r.json();
+        if (Array.isArray(j.quickQuestions) && j.quickQuestions.length) setQuick(j.quickQuestions);
+        if (typeof j.greeting === 'string' && j.greeting) {
+          setMsgs([{ role: 'bot', text: j.greeting }]);
+        }
+      } catch {
+        /* 用默认值 */
+      }
+    })();
+  }, []);
 
   // 外部联动（如 RWA 表单提交成功后自动打开并预填）
   useEffect(() => {
@@ -127,7 +145,7 @@ export default function ChatWidget() {
             </div>
 
             <div className="flex flex-wrap gap-2 px-3 pb-2">
-              {QUICK.map((q) => (
+              {quick.map((q) => (
                 <button
                   key={q}
                   onClick={() => send(q)}

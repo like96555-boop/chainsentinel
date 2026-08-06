@@ -337,6 +337,9 @@ export default function AlertsPage() {
         <FileWarning size={14} className="mt-0.5 shrink-0 text-neon-yellow" />
         标注「演示」的地址为模拟种子数据，仅用于功能展示；真实名单会持续收录公开披露的钓鱼归集、洗钱通道、混币入口与诈骗资金地址，并随证据链更新。
       </motion.p>
+      <p className="mt-2 text-[10px] leading-relaxed text-slate-600">
+        归类依据：风险类型按行为特征划分（钓鱼归集=多笔小额汇入单一地址；洗钱通道=高频中转且来源分散；混币入口=与混币协议交互；诈骗资金=关联公开报案/披露事件）。每条记录可点击链上证据复核原始交易；标记时间与交易数来自公开链上数据。
+      </p>
     </main>
   );
 }

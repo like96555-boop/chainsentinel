@@ -235,6 +235,9 @@ export default function AddressChecker() {
                 <RotateCcw size={12} /> 再查一个
               </button>
             </div>
+            <p className="mt-3 border-t border-cyber-700/60 pt-2 text-[10px] leading-relaxed text-slate-500">
+              数据来源：链上公开数据（TronGrid / Blockstream / 公共 RPC）+ 本地黑名单库；判定依据见上方逐条理由与链上证据（可点击复核）。结果仅为风险提示，不构成法律意见。
+            </p>
           </motion.div>
         )}
       </AnimatePresence>

@@ -2,18 +2,10 @@ import { NextResponse } from 'next/server';
 import { chatSchema } from '@/lib/validation';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { getSecret } from '@/lib/secrets';
+import { readAiConfig, buildSystemMessage } from '@/lib/ai-config';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const SYSTEM_PROMPT = `你是「链哨 ChainSentinel」的官方 AI 客服，用简洁专业的中文回答。
-产品 FAQ：
-- 产品是什么：链哨 ChainSentinel 是面向商户与机构的链上风控 SaaS，专注 TRON 网络 USDT 收款前的地址风险识别——3 秒内判断对手方地址是否疑似黑钱/诈骗/混币资金，帮助商户避免收到"脏 U"导致账户被冻结。
-- 核心能力：地址监控、收款前拦截（Payment Firewall）、税务合规报表、聪明钱追踪（Pro）。
-- 定价：社区版免费（每日 100 次查询）；专业版 ¥9,800/年（无限查询、API 接入、Webhook 告警、聪明钱追踪）；商业授权 ¥50,000 起（私有化部署、源码授权、定制标签库）。
-- 如何接入：专业版开放 REST API 与 Webhook，10 行代码即可嵌入收银台；官网底部预约表单可申请试用，或直接联系销售。
-- 合规定位：ChainSentinel Limited 注册于香港，提供 RWA 与稳定币合规咨询；风控结果仅为风险提示，不构成法律意见。
-回答时语气专业克制，不夸大，不做投资/法律建议。回答控制在 200 字以内。`;
 
 function streamText(text: string): Response {
   const encoder = new TextEncoder();
@@ -65,6 +57,11 @@ export async function POST(req: Request) {
 
   const apiKey = getSecret('KIMI_API_KEY');
   const baseUrl = (getSecret('KIMI_BASE_URL') || 'https://api.kimi.com/coding/v1').replace(/\/+$/, '');
+  const cfg = readAiConfig();
+
+  if (!cfg.enabled) {
+    return streamText('AI 客服当前已由管理员停用，请稍后再试。您也可以直接查看页面上的产品介绍、定价与预约入口。');
+  }
 
   if (!apiKey) {
     return streamText(
@@ -83,10 +80,11 @@ export async function POST(req: Request) {
       signal: AbortSignal.timeout(60_000),
       cache: 'no-store',
       body: JSON.stringify({
-        model: 'kimi-for-coding',
+        model: cfg.model || 'kimi-for-coding',
         stream: true,
+        // 注：Kimi coding 端点不接受 temperature 参数（会 400），配置值仅存管理台备用
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: buildSystemMessage(cfg) },
           { role: 'user', content: parsed.data.message },
         ],
       }),
