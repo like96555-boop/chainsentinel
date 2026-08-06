@@ -1,0 +1,343 @@
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import { KeyRound, Webhook as WebhookIcon, Megaphone, Settings2, Plus, Trash2, Power, Copy, Check, TestTube2 } from 'lucide-react';
+
+export type ConfigTab = 'apikeys' | 'webhooks' | 'banners' | 'settings';
+
+const inputCls =
+  'w-full rounded-lg border border-cyber-700 bg-cyber-950/70 px-3 py-2 text-sm text-slate-200 outline-none focus:border-neon-cyan/60';
+const btnPrimary =
+  'flex items-center gap-1.5 rounded-lg bg-neon-cyan/20 px-3 py-2 text-xs font-medium text-neon-cyan ring-1 ring-neon-cyan/40 transition hover:bg-neon-cyan/30 active:scale-95';
+const btnDanger = 'rounded-md border border-cyber-700 p-1.5 text-slate-400 transition hover:border-neon-red/60 hover:text-neon-red active:scale-90';
+const sectionCls = 'rounded-2xl border border-cyber-700 bg-cyber-900/60 p-6';
+
+async function jfetch(url: string, method = 'GET', body?: unknown) {
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  return { res, json: await res.json().catch(() => null) };
+}
+
+function Notice({ msg }: { msg: string | null }) {
+  if (!msg) return null;
+  const ok = msg.startsWith('✅');
+  return <p className={`mt-3 text-xs ${ok ? 'text-neon-green' : 'text-neon-red'}`}>{msg}</p>;
+}
+
+/* ---------------- API 令牌 ---------------- */
+function ApiKeys() {
+  const [items, setItems] = useState<any[]>([]);
+  const [name, setName] = useState('');
+  const [quota, setQuota] = useState(1000);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [justCreated, setJustCreated] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const { json } = await jfetch('/api/admin/keys');
+    if (json?.keys) setItems(json.keys);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function create() {
+    if (!name.trim()) { setMsg('⚠️ 请填写令牌名称'); return; }
+    const { res, json } = await jfetch('/api/admin/keys', 'POST', { name, dailyQuota: quota });
+    if (res.ok && json?.key) {
+      setJustCreated(json.key.fullKey);
+      setMsg('✅ 已创建（密钥只显示这一次，请立即保存）');
+      setName('');
+      load();
+    } else setMsg(`⚠️ ${json?.error || '创建失败'}`);
+  }
+
+  async function toggle(item: any) {
+    const { json } = await jfetch('/api/admin/keys', 'PUT', { id: item.id, enabled: !item.enabled });
+    if (json?.ok) { setMsg('✅ 已保存'); load(); }
+  }
+  async function remove(id: string) {
+    const { json } = await jfetch(`/api/admin/keys?id=${id}`, 'DELETE');
+    if (json?.ok) { setMsg('✅ 已吊销'); load(); }
+  }
+
+  return (
+    <section className={sectionCls}>
+      <div className="flex items-center gap-2">
+        <KeyRound size={18} className="text-neon-cyan" />
+        <h2 className="text-lg font-bold">API 令牌</h2>
+        <span className="text-xs text-slate-500">开放平台接入凭证（专业版客户使用）</span>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_160px_auto]">
+        <input className={inputCls} placeholder="令牌名称（如：客户A-收银台）" value={name} onChange={(e) => setName(e.target.value)} />
+        <input className={inputCls} type="number" placeholder="日配额" value={quota} onChange={(e) => setQuota(Number(e.target.value))} />
+        <button className={btnPrimary} onClick={create}><Plus size={13} /> 生成令牌</button>
+      </div>
+      {justCreated && (
+        <div className="mt-3 rounded-lg border border-neon-yellow/40 bg-neon-yellow/10 p-3">
+          <p className="text-xs text-neon-yellow">新密钥（仅显示一次）：</p>
+          <p className="mt-1 flex items-center gap-2 break-all font-mono text-xs text-slate-100">
+            {justCreated}
+            <button
+              className="text-neon-cyan hover:text-white"
+              onClick={() => { navigator.clipboard?.writeText(justCreated); setMsg('✅ 已复制'); }}
+            >
+              <Copy size={13} />
+            </button>
+          </p>
+        </div>
+      )}
+      <div className="mt-4 space-y-2">
+        {items.length === 0 && <p className="text-xs text-slate-500">暂无令牌，先生成一个。</p>}
+        {items.map((k) => (
+          <div key={k.id} className="flex items-center gap-3 rounded-lg border border-cyber-700 bg-cyber-950/50 px-3 py-2">
+            <span className="w-36 truncate text-sm text-slate-200">{k.name}</span>
+            <span className="font-mono text-xs text-slate-400">{k.key}</span>
+            <span className="text-xs text-slate-500">{k.enabled ? `日配额 ${k.dailyQuota}` : '已停用'}</span>
+            <span className="ml-auto flex gap-1.5">
+              <button className={btnDanger} title={k.enabled ? '停用' : '启用'} onClick={() => toggle(k)}><Power size={12} /></button>
+              <button className={btnDanger} title="吊销" onClick={() => remove(k.id)}><Trash2 size={12} /></button>
+            </span>
+          </div>
+        ))}
+      </div>
+      <Notice msg={msg} />
+    </section>
+  );
+}
+
+/* ---------------- Webhook ---------------- */
+const EVENTS = ['address.flagged', 'address.checked', 'payment.blocked', 'smartmoney.activity'];
+const EVENT_LABELS: Record<string, string> = {
+  'address.flagged': '地址被标记风险',
+  'address.checked': '地址完成核查',
+  'payment.blocked': '收款被拦截',
+  'smartmoney.activity': '聪明钱异动',
+};
+
+function Webhooks() {
+  const [items, setItems] = useState<any[]>([]);
+  const [name, setName] = useState('');
+  const [url, setUrl] = useState('');
+  const [events, setEvents] = useState<string[]>(['address.flagged']);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const { json } = await jfetch('/api/admin/webhooks');
+    if (json?.webhooks) setItems(json.webhooks);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  async function save() {
+    if (!name.trim() || !url.trim()) { setMsg('⚠️ 请填写名称与回调 URL'); return; }
+    const { res, json } = await jfetch('/api/admin/webhooks', 'POST', { name, url, events });
+    if (res.ok) { setMsg('✅ 已创建'); setName(''); setUrl(''); load(); } else setMsg(`⚠️ ${json?.error || '创建失败'}`);
+  }
+  async function toggle(item: any) {
+    const { json } = await jfetch('/api/admin/webhooks', 'PUT', { id: item.id, name: item.name, url: item.url, events: item.events, enabled: !item.enabled });
+    if (json?.ok) { setMsg('✅ 已保存'); load(); }
+  }
+  async function remove(id: string) {
+    const { json } = await jfetch(`/api/admin/webhooks?id=${id}`, 'DELETE');
+    if (json?.ok) { setMsg('✅ 已删除'); load(); }
+  }
+  async function testSend(item: any) {
+    try {
+      const r = await fetch(item.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-ChainSentinel-Test': '1' },
+        body: JSON.stringify({ event: 'test.ping', ts: Date.now(), message: '链哨 Webhook 测试' }),
+      });
+      setMsg(r.ok ? `✅ 测试发送成功（HTTP ${r.status}）` : `⚠️ 对方返回 HTTP ${r.status}`);
+    } catch {
+      setMsg('⚠️ 无法送达该 URL（请检查地址可访问性）');
+    }
+  }
+
+  return (
+    <section className={sectionCls}>
+      <div className="flex items-center gap-2">
+        <WebhookIcon size={18} className="text-neon-cyan" />
+        <h2 className="text-lg font-bold">Webhook 回调</h2>
+        <span className="text-xs text-slate-500">风险事件实时推送到你的系统</span>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <input className={inputCls} placeholder="名称（如：商户A-风控系统）" value={name} onChange={(e) => setName(e.target.value)} />
+        <input className={inputCls} placeholder="https://your-server.com/webhook" value={url} onChange={(e) => setUrl(e.target.value)} />
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {EVENTS.map((ev) => (
+          <button
+            key={ev}
+            onClick={() => setEvents((p) => (p.includes(ev) ? p.filter((x) => x !== ev) : [...p, ev]))}
+            className={`rounded-lg px-3 py-1.5 text-xs transition ${
+              events.includes(ev)
+                ? 'bg-neon-cyan/20 text-neon-cyan ring-1 ring-neon-cyan/40'
+                : 'border border-cyber-700 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            {EVENT_LABELS[ev]}
+          </button>
+        ))}
+        <button className={btnPrimary} onClick={save}><Plus size={13} /> 创建 Webhook</button>
+      </div>
+      <div className="mt-4 space-y-2">
+        {items.length === 0 && <p className="text-xs text-slate-500">暂无 Webhook 配置。</p>}
+        {items.map((w) => (
+          <div key={w.id} className="flex items-center gap-3 rounded-lg border border-cyber-700 bg-cyber-950/50 px-3 py-2">
+            <span className="w-32 truncate text-sm text-slate-200">{w.name}</span>
+            <span className="flex-1 truncate font-mono text-xs text-slate-400">{w.url}</span>
+            <span className="text-xs text-slate-500">{w.events?.length || 0} 个事件</span>
+            <span className="ml-auto flex gap-1.5">
+              <button className={btnDanger} title="测试发送" onClick={() => testSend(w)}><TestTube2 size={12} /></button>
+              <button className={btnDanger} title={w.enabled ? '停用' : '启用'} onClick={() => toggle(w)}><Power size={12} /></button>
+              <button className={btnDanger} title="删除" onClick={() => remove(w.id)}><Trash2 size={12} /></button>
+            </span>
+          </div>
+        ))}
+      </div>
+      <Notice msg={msg} />
+    </section>
+  );
+}
+
+/* ---------------- 营销横幅 ---------------- */
+const POSITIONS = [
+  ['home-top', '首页顶部'],
+  ['home-pricing', '首页定价区'],
+  ['alerts-top', '警示榜顶部'],
+  ['smartmoney-top', '聪明钱页顶部'],
+] as const;
+
+function Banners() {
+  const [items, setItems] = useState<any[]>([]);
+  const [form, setForm] = useState<any>({ position: 'home-top', title: '', subtitle: '', emoji: '📣', linkUrl: '', enabled: true, sort: 0 });
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const { json } = await jfetch('/api/admin/banners');
+    if (json?.banners) setItems(json.banners);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  async function save() {
+    if (!form.title.trim()) { setMsg('⚠️ 请填写横幅标题'); return; }
+    const { res, json } = await jfetch('/api/admin/banners', 'POST', form);
+    if (res.ok) { setMsg('✅ 已创建并启用，公开页面即时展示'); setForm({ position: 'home-top', title: '', subtitle: '', emoji: '📣', linkUrl: '', enabled: true, sort: 0 }); load(); }
+    else setMsg(`⚠️ ${json?.error || '创建失败'}`);
+  }
+  async function toggle(item: any) {
+    const { json } = await jfetch('/api/admin/banners', 'PUT', { ...item, enabled: !item.enabled });
+    if (json?.ok) { setMsg('✅ 已保存'); load(); }
+  }
+  async function remove(id: string) {
+    const { json } = await jfetch(`/api/admin/banners?id=${id}`, 'DELETE');
+    if (json?.ok) { setMsg('✅ 已删除'); load(); }
+  }
+
+  return (
+    <section className={sectionCls}>
+      <div className="flex items-center gap-2">
+        <Megaphone size={18} className="text-neon-cyan" />
+        <h2 className="text-lg font-bold">营销横幅</h2>
+        <span className="text-xs text-slate-500">广告位模块化管理：位置/排序/启停，傻瓜式运营</span>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <input className={inputCls} placeholder="标题（如：专业版限时 8 折）" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+        <input className={inputCls} placeholder="副标题（一行说明）" value={form.subtitle} onChange={(e) => setForm({ ...form, subtitle: e.target.value })} />
+        <div className="grid grid-cols-[90px_1fr] gap-2">
+          <input className={inputCls} placeholder="📣" value={form.emoji} onChange={(e) => setForm({ ...form, emoji: e.target.value })} />
+          <select className={inputCls} value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })}>
+            {POSITIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </div>
+        <div className="grid grid-cols-[1fr_100px] gap-2">
+          <input className={inputCls} placeholder="跳转链接（可留空）" value={form.linkUrl} onChange={(e) => setForm({ ...form, linkUrl: e.target.value })} />
+          <input className={inputCls} type="number" placeholder="排序" value={form.sort} onChange={(e) => setForm({ ...form, sort: Number(e.target.value) })} />
+        </div>
+      </div>
+      <button className={`${btnPrimary} mt-3`} onClick={save}><Plus size={13} /> 上架横幅</button>
+      <div className="mt-4 space-y-2">
+        {items.length === 0 && <p className="text-xs text-slate-500">暂无横幅。上架后首页/对应页面顶部立即出现轮播位。</p>}
+        {items.map((b) => (
+          <div key={b.id} className="flex items-center gap-3 rounded-lg border border-cyber-700 bg-cyber-950/50 px-3 py-2">
+            <span className="text-lg">{b.emoji}</span>
+            <span className="w-40 truncate text-sm text-slate-200">{b.title}</span>
+            <span className="text-xs text-slate-500">{POSITIONS.find(([v]) => v === b.position)?.[1]}</span>
+            <span className="text-xs text-slate-600">排序 {b.sort}</span>
+            <span className={`ml-auto flex gap-1.5`}>
+              <button className={btnDanger} title={b.enabled ? '下架' : '上架'} onClick={() => toggle(b)}><Power size={12} /></button>
+              <button className={btnDanger} title="删除" onClick={() => remove(b.id)}><Trash2 size={12} /></button>
+            </span>
+          </div>
+        ))}
+      </div>
+      <Notice msg={msg} />
+    </section>
+  );
+}
+
+/* ---------------- 站点设置 ---------------- */
+function Settings() {
+  const [form, setForm] = useState<any>({ siteName: '', slogan: '', announcement: '', contactEmail: '', footerText: '', seoKeywords: '' });
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const { json } = await jfetch('/api/admin/settings');
+    if (json?.settings) setForm(json.settings);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  async function save() {
+    const { res, json } = await jfetch('/api/admin/settings', 'PUT', form);
+    if (res.ok) { setMsg('✅ 已保存，公开页面 30 秒内生效'); } else setMsg(`⚠️ ${json?.error || '保存失败'}`);
+  }
+
+  const set = (k: string, v: string) => setForm({ ...form, [k]: v });
+
+  return (
+    <section className={sectionCls}>
+      <div className="flex items-center gap-2">
+        <Settings2 size={18} className="text-neon-cyan" />
+        <h2 className="text-lg font-bold">站点设置</h2>
+        <span className="text-xs text-slate-500">站名/公告/联系方式/SEO，一处改全站生效</span>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="text-xs text-slate-500">站点名称</label>
+          <input className={inputCls} value={form.siteName} onChange={(e) => set('siteName', e.target.value)} />
+        </div>
+        <div>
+          <label className="text-xs text-slate-500">Slogan</label>
+          <input className={inputCls} value={form.slogan} onChange={(e) => set('slogan', e.target.value)} />
+        </div>
+        <div>
+          <label className="text-xs text-slate-500">公告（顶部滚动条，留空隐藏）</label>
+          <input className={inputCls} value={form.announcement} onChange={(e) => set('announcement', e.target.value)} />
+        </div>
+        <div>
+          <label className="text-xs text-slate-500">联系邮箱</label>
+          <input className={inputCls} value={form.contactEmail} onChange={(e) => set('contactEmail', e.target.value)} />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="text-xs text-slate-500">页脚文案</label>
+          <input className={inputCls} value={form.footerText} onChange={(e) => set('footerText', e.target.value)} />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="text-xs text-slate-500">SEO 关键词（逗号分隔）</label>
+          <input className={inputCls} value={form.seoKeywords} onChange={(e) => set('seoKeywords', e.target.value)} />
+        </div>
+      </div>
+      <button className={`${btnPrimary} mt-4`} onClick={save}>💾 保存设置</button>
+      <Notice msg={msg} />
+    </section>
+  );
+}
+
+export default function ConfigModules({ tab }: { tab: ConfigTab }) {
+  if (tab === 'apikeys') return <div className="mt-6"><ApiKeys /></div>;
+  if (tab === 'webhooks') return <div className="mt-6"><Webhooks /></div>;
+  if (tab === 'banners') return <div className="mt-6"><Banners /></div>;
+  return <div className="mt-6"><Settings /></div>;
+}

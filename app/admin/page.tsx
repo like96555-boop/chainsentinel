@@ -18,6 +18,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
+import ConfigModules from '@/components/admin/ConfigModules';
 
 interface MaskedSecret {
   key: string;
@@ -59,6 +60,7 @@ export default function AdminPage() {
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<Status | null>(null);
   const [notice, setNotice] = useState('');
+  const [tab, setTab] = useState<'overview' | 'apikeys' | 'webhooks' | 'banners' | 'settings'>('overview');
 
   // 聪明钱监控
   const [smItems, setSmItems] = useState<SmItem[]>([]);
@@ -285,6 +287,33 @@ export default function AdminPage() {
         </div>
       </div>
 
+      {/* 模块导航 */}
+      <nav className="mt-6 flex flex-wrap gap-2">
+        {(
+          [
+            ['overview', '运营总览'],
+            ['apikeys', 'API 令牌'],
+            ['webhooks', 'Webhook'],
+            ['banners', '营销横幅'],
+            ['settings', '站点设置'],
+          ] as const
+        ).map(([k, label]) => (
+          <button
+            key={k}
+            onClick={() => setTab(k)}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+              tab === k
+                ? 'bg-neon-cyan/15 text-neon-cyan ring-1 ring-neon-cyan/50'
+                : 'border border-cyber-700 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+
+      {tab === 'overview' && (
+        <>
       {/* 密钥管理 */}
       <section className="mt-8 rounded-2xl border border-cyber-700 bg-cyber-900/60 p-6">
         <div className="flex items-center gap-2">
@@ -544,6 +573,10 @@ export default function AdminPage() {
           公开页 /smart-money 实时读取本列表；停用后该地址立即从公开页消失。链上数据来自公共 RPC / Blockstream / TronGrid。
         </p>
       </section>
+        </>
+      )}
+
+      {tab !== 'overview' && <ConfigModules tab={tab} />}
     </main>
   );
 }

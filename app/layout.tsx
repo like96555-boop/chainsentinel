@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import ChatWidget from '@/components/ChatWidget';
+import { AnnouncementBar } from '@/components/BannerCarousel';
 
 export const metadata: Metadata = {
   title: '链哨 ChainSentinel — 3 秒识别黑钱地址',
@@ -15,13 +16,13 @@ const NAV_LINKS = [
   { href: '/', label: '首页' },
   { href: '/alerts', label: '风险警示榜' },
   { href: '/smart-money', label: '聪明钱追踪' },
-  { href: '/admin', label: '管理后台' },
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN">
       <body className="min-h-screen antialiased">
+        <AnnouncementBar />
         <header className="sticky top-0 z-50 border-b border-cyber-800 bg-cyber-950/85 backdrop-blur">
           <nav className="mx-auto flex max-w-5xl items-center gap-6 px-6 py-3">
             <a href="/" className="flex items-center gap-2 text-sm font-bold tracking-wide">

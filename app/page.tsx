@@ -16,6 +16,7 @@ import {
 import AddressChecker from '@/components/AddressChecker';
 import Counter from '@/components/Counter';
 import MarketTicker from '@/components/MarketTicker';
+import { BannerCarousel } from '@/components/BannerCarousel';
 
 const fadeUp = {
   initial: { opacity: 0, y: 32 },
@@ -162,6 +163,11 @@ const PLANS = [
 export default function LandingPage() {
   return (
     <main className="grid-bg">
+      {/* 营销横幅：首页顶部 */}
+      <div className="pt-6">
+        <BannerCarousel position="home-top" />
+      </div>
+
       {/* Hero */}
       <section className="relative mx-auto flex min-h-[88vh] max-w-5xl flex-col items-center justify-center px-6 pt-16 text-center">
         <motion.p
@@ -274,6 +280,7 @@ export default function LandingPage() {
       </section>
 
       {/* 定价区 */}
+      <BannerCarousel position="home-pricing" />
       <section id="pricing" className="mx-auto max-w-5xl px-6 py-14">
         <motion.h2 {...fadeUp} className="text-center text-3xl font-bold">
           透明定价

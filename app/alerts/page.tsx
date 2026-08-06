@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { BannerCarousel } from '@/components/BannerCarousel';
 import {
   ShieldAlert,
   ExternalLink,
@@ -120,6 +121,10 @@ export default function AlertsPage() {
 
   return (
     <main className="grid-bg mx-auto min-h-screen max-w-5xl px-6 py-10">
+      {/* 营销横幅：警示榜顶部 */}
+      <div className="mb-6">
+        <BannerCarousel position="alerts-top" />
+      </div>
       {/* 页头 */}
       <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <div className="flex items-center gap-3">

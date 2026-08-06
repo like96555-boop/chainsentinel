@@ -18,6 +18,7 @@ import {
   Activity,
 } from 'lucide-react';
 import KlineSection from '@/components/KlineSection';
+import { BannerCarousel } from '@/components/BannerCarousel';
 
 type SmartChain = 'tron' | 'btc' | 'eth';
 
@@ -151,6 +152,10 @@ export default function SmartMoneyPage() {
 
   return (
     <main className="grid-bg mx-auto min-h-screen max-w-5xl px-6 py-10">
+      {/* 营销横幅：聪明钱页顶部 */}
+      <div className="mb-6">
+        <BannerCarousel position="smartmoney-top" />
+      </div>
       {/* 页头 */}
       <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <div className="flex items-center gap-3">
