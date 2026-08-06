@@ -202,17 +202,23 @@ async function main() {
 
   // ── 9. 聪明钱追踪（真实链上数据 + Feature Gate 字段） ───────────
   {
-    const ip = groupIp();
-    const r = await fetch(`${BASE}/api/smart-money/list`, { headers: { 'X-Forwarded-For': ip } });
-    const j = await r.json().catch(() => null);
-    const items = Array.isArray(j?.items) ? j.items : [];
-    const vitalik = items.find((i) => i.name && i.name.includes('Vitalik')) || items.find((i) => i.chain === 'eth');
-    const hasRealData = items.length > 0 && items.some((i) => (i.balanceUsd ?? i.balance ?? 0) > 0 || (i.txCount ?? 0) > 1000);
-    report(
-      '聪明钱列表：真实链上数据返回（Vitalik 余额>0）',
-      r.status === 200 && hasRealData && !!vitalik,
-      `HTTP ${r.status} items=${items.length} Vitalik balance=${vitalik?.balance ?? '?'} ${vitalik?.chain ?? '?'} degraded=${vitalik?.degraded ?? '?'}`
-    );
+    // 上游为外部公共 API（TronGrid/Blockstream/公共 RPC），偶发慢响应；失败时重试一次（第二次通常命中 60s 缓存）
+    let ok = false;
+    let detail = '';
+    for (let attempt = 1; attempt <= 2 && !ok; attempt++) {
+      const ip = groupIp();
+      const r = await fetch(`${BASE}/api/smart-money/list`, { headers: { 'X-Forwarded-For': ip } });
+      const j = await r.json().catch(() => null);
+      const items = Array.isArray(j?.items) ? j.items : [];
+      const vitalik = items.find((i) => i.name && i.name.includes('Vitalik')) || items.find((i) => i.chain === 'eth');
+      const hasRealData = items.length > 0 && items.some((i) => (i.balanceUsd ?? i.balance ?? 0) > 0 || (i.txCount ?? 0) > 1000);
+      ok = r.status === 200 && hasRealData && !!vitalik;
+      detail = `HTTP ${r.status} items=${items.length} Vitalik balance=${vitalik?.balance ?? '?'} ${vitalik?.chain ?? '?'} degraded=${vitalik?.degraded ?? '?'}`;
+      if (!ok && attempt === 1) {
+        await new Promise((res) => setTimeout(res, 5000));
+      }
+    }
+    report('聪明钱列表：真实链上数据返回（Vitalik 余额>0）', ok, detail);
   }
 
   const pass = results.filter((r) => r.ok).length;
