@@ -50,15 +50,26 @@ docker compose up -d
 - 安全响应头：`X-Content-Type-Options` / `X-Frame-Options: DENY` / `Referrer-Policy` / 基础 CSP。
 - `.gitignore` 已排除 `.env*`、`data/secrets*`、`data/leads.json`。
 
+## 功能清单（已建成并实测）
+
+| 页面 | 说明 |
+|---|---|
+| `/` 落地页 | Hero 免注册多链查询（TRON/BTC/ETH 自动识别）、主流币行情条、功能卡、定价、RWA 咨询表单、AI 客服 |
+| `/alerts` 链上风险警示榜 | 免费公开的链上风险情报：按链/类型筛选、分页、掩码地址、证据链接直达链浏览器、一键核查 |
+| `/smart-money` 聪明钱动向 | 机构/巨鲸地址实时链上数据（余额/交易数/最近动态时间线）+ 关注标的 K 线走势（30 日）；Feature Gate 免费 3 地址×3 动态 |
+| `/pro/smart-money` | Pro 功能锁态演示（升级引导） |
+| `/admin` 管理后台 | 密钥加密管理（掩码显示）、系统状态、预约线索、聪明钱监控 CRUD |
+
 ## 测试
 
-服务运行中执行（三套件：功能回归 12 项 + 安全 16 项 + 压测）：
+服务运行中执行（功能回归 14 项 + 新功能全链路 15 项 + 安全 16 项 + 压测）：
 
 ```bash
 npm test
+node scripts/feature-test.mjs   # 三期新功能（警示榜/聪明钱/后台CRUD/限流）
 ```
 
-报告自动保存到 `test-reports/`。最近一次实测（2026-08-05）：回归 12/12、安全 16/16、首页 100 并发 100% 成功 p95=180ms、/api/check 限流冲击下 429 拒绝成本 51ms、内存无异常。
+报告自动保存到 `test-reports/`。最近一次实测（2026-08-06）：回归 14/14、安全 16/16、压测通过、新功能 15/15（真实链上数据：Vitalik 6.63 ETH、BTC 创世 57.3 BTC）。
 
 ## 目录结构
 
