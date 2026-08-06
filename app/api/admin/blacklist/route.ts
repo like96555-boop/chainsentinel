@@ -11,7 +11,12 @@ type BlackItem = { id: string; address: string; chain: 'tron' | 'btc' | 'eth' | 
 
 const schema = z.object({
   id: z.string().optional(),
-  address: z.string().min(5).max(100),
+  address: z.string().min(5).max(100).refine((v) => {
+    if (/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(v)) return true; // TRON base58
+    if (/^0x[0-9a-fA-F]{40}$/.test(v)) return true; // ETH/EVM
+    if (/^(bc1[ac-hj-np-z02-9]{11,71}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/.test(v)) return true; // BTC
+    return false;
+  }, { message: '地址格式不正确（支持 TRON T 开头 34 位 / ETH 0x+40hex / BTC bc1·1·3 开头）' }),
   chain: z.enum(['tron', 'btc', 'eth', 'any']),
   label: z.string().min(1).max(50),
   type: z.enum(['phishing', 'laundering', 'mixer', 'fraud']).default('phishing'),
