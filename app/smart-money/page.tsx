@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   Activity,
 } from 'lucide-react';
+import KlineSection from '@/components/KlineSection';
 
 type SmartChain = 'tron' | 'btc' | 'eth';
 
@@ -166,6 +167,11 @@ export default function SmartMoneyPage() {
           <span>数据来自公开链上信息，非投资建议。</span>
         </div>
       </motion.div>
+
+      {/* 聪明钱关注标的 · 近 30 日走势（K 线） */}
+      <div className="mt-8">
+        <KlineSection />
+      </div>
 
       {/* 加载态：骨架屏 */}
       {loading && (
