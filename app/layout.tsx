@@ -16,6 +16,7 @@ const NAV_LINKS = [
   { href: '/', label: '首页' },
   { href: '/alerts', label: '风险警示榜' },
   { href: '/smart-money', label: '聪明钱追踪' },
+  { href: '/tax', label: '税务中心' },
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
