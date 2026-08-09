@@ -16,7 +16,7 @@ import {
   AlertTriangle,
   FileWarning,
 } from 'lucide-react';
-import { ALERT_TYPE_META, ALERT_CHAIN_META, ALERT_TYPES } from '@/lib/alerts-meta';
+import { ALERT_TYPE_META, ALERT_CHAIN_META, ALERT_TYPES, sourceBadgeOf } from '@/lib/alerts-meta';
 import type { AlertType, AlertChain } from '@/lib/alerts-meta';
 
 interface AlertItem {
@@ -246,6 +246,12 @@ export default function AlertsPage() {
                               {tm.label}
                             </span>
                             <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${cm.badge}`}>{cm.label}</span>
+                            {(() => {
+                              const sb = sourceBadgeOf(item.source);
+                              return (
+                                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${sb.cls}`}>{sb.label}</span>
+                              );
+                            })()}
                             {item.demo && (
                               <span className="rounded-full border border-slate-600/60 px-2 py-0.5 text-[10px] text-slate-500">演示</span>
                             )}

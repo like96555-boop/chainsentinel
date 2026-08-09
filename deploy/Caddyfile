@@ -1,0 +1,33 @@
+# 链哨 ChainSentinel · Caddy 反向代理配置（自动 HTTPS）
+# 使用：把下面的 你的主域名 / ai.你的主域名 替换为真实域名，然后
+#   sudo cp Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
+# 注意：域名需先解析 A 记录到本服务器 IP（80/443 放行）
+
+你的主域名 {
+	encode gzip
+	reverse_proxy 127.0.0.1:3000
+
+	# 安全响应头（与主站 next.config.js 互补）
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+	}
+	# 限流示例（如遇刷量可启用：每 IP 每分钟 120 请求，超限 429）
+	# rate_limit { zone dynamic { window 1m { events 120 } } }
+}
+
+ai.你的主域名 {
+	encode gzip
+	reverse_proxy 127.0.0.1:3001
+
+	# AI 管理台：仅放行管理用途，可加基础认证双保险（如不需要删除）
+	# basicauth {
+	# 	admin $2a$14$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	# }
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+	}
+}

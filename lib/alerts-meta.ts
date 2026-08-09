@@ -41,3 +41,17 @@ export function maskAddress(address: string): string {
   if (address.length <= 10) return address;
   return `${address.slice(0, 4)}…${address.slice(-4)}`;
 }
+
+/**
+ * 来源等级徽章：区分「已确认事件」与「特征观察」。
+ * 风控纪律：红牌级结论只由已确认事件支撑；特征观察仅为提示，不构成定性。
+ */
+export const ALERT_SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
+  'public-record': { label: '已确认事件', cls: 'border-sky-400/50 bg-sky-400/10 text-sky-300' },
+  'ofac-sdn': { label: '官方制裁名单', cls: 'border-sky-400/50 bg-sky-400/10 text-sky-300' },
+  'onchain-heuristic': { label: '特征观察', cls: 'border-slate-500/60 bg-slate-500/10 text-slate-400' },
+};
+
+export function sourceBadgeOf(source?: string): { label: string; cls: string } {
+  return ALERT_SOURCE_BADGE[source || ''] || { label: '来源未标注', cls: 'border-slate-600/60 bg-slate-600/10 text-slate-500' };
+}

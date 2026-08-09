@@ -58,13 +58,38 @@ const ok = (name, cond, detail = '') => {
   }
   ok('测试条目已清理', true);
 
-  // 6) 同步引擎：无 key 优雅提示（exit 2，不崩）
+  // 6) 同步引擎：TRONSCAN 源无 key 优雅提示（exit 2，不崩）；默认源（heuristic-tron）无 key 可正常同步
   try {
-    execSync('node scripts/intel-sync.mjs', { cwd: 'C:/Users/37515/Desktop/临时AI/链哨ChainSentinel', env: { ...process.env }, stdio: 'pipe' });
-    ok('intel-sync 无 key 行为', false, '预期 exit 2 但正常退出');
+    execSync('node scripts/intel-sync.mjs tronscan', { cwd: 'C:/Users/37515/Desktop/临时AI/链哨ChainSentinel', env: { ...process.env }, stdio: 'pipe' });
+    ok('intel-sync tronscan 无 key 行为', false, '预期 exit 2 但正常退出');
   } catch (e) {
-    ok('intel-sync 无 key 优雅提示（exit 2）', e.status === 2, `exit=${e.status}`);
+    ok('intel-sync tronscan 无 key 优雅提示（exit 2）', e.status === 2, `exit=${e.status}`);
   }
+  try {
+    const out = execSync('node scripts/intel-sync.mjs heuristic-tron', { cwd: 'C:/Users/37515/Desktop/临时AI/链哨ChainSentinel', env: { ...process.env }, stdio: 'pipe', timeout: 60000 }).toString();
+    ok('intel-sync heuristic-tron 无 key 正常同步', /同步完成|无新增/.test(out), out.trim().slice(0, 80));
+  } catch (e) {
+    ok('intel-sync heuristic-tron 无 key 正常同步', false, `exit=${e.status}`);
+  }
+
+  // 7) OFAC 制裁名单源：同步成功 + 红牌命中 + 来源人话化（官方公开数据，零申请）
+  // 外部网络抖动（GitHub）偶发失败：重试一次
+  let ofacSyncOk = false;
+  let ofacDetail = '';
+  for (let attempt = 0; attempt < 2 && !ofacSyncOk; attempt++) {
+    try {
+      const out = execSync('node scripts/intel-sync.mjs ofac', { cwd: 'C:/Users/37515/Desktop/临时AI/链哨ChainSentinel', env: { ...process.env }, stdio: 'pipe', timeout: 90000 }).toString();
+      ofacSyncOk = /同步完成/.test(out);
+      ofacDetail = out.trim().slice(0, 100);
+    } catch (e) {
+      ofacDetail = `exit=${e.status}`;
+      if (attempt === 0) await new Promise((s) => setTimeout(s, 4000));
+    }
+  }
+  ok('intel-sync ofac 正常同步（官方制裁名单）', ofacSyncOk, ofacDetail);
+  const ofacCheck = await (await fetch(`${BASE}/api/check`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '10.96.1.1' }, body: JSON.stringify({ address: 'TNiq9AXBp9EjUqhDhrwrfvAA8U3GUQZH81' }) })).json();
+  ok('OFAC 制裁地址查红牌', ofacCheck.level === 'red' && ofacCheck.blacklist?.source === 'ofac-sdn', `level=${ofacCheck.level} source=${ofacCheck.blacklist?.source}`);
+  ok('OFAC 来源人话=美国财政部 OFAC 制裁名单', ofacCheck.blacklist?.sourceLabel === '美国财政部 OFAC 制裁名单（官方公开数据）', `sourceLabel=${ofacCheck.blacklist?.sourceLabel}`);
 
   console.log(`\n===== 情报源导入测试: ${pass}/${pass + fail} 通过 =====`);
   process.exit(fail ? 1 : 0);

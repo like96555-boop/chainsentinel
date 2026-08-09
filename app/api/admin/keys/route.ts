@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server';
 import { isAuthed } from '@/lib/session';
 import { readStore, writeStore, newId, mask } from '@/lib/config-store';
 import { z } from 'zod';
+import { dayKey } from '@/lib/billing';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-type ApiKey = { id: string; name: string; key: string; dailyQuota: number; enabled: boolean; createdAt: number; lastUsedAt: number };
+type ApiKey = { id: string; name: string; key: string; dailyQuota: number; enabled: boolean; createdAt: number; lastUsedAt: number; usageByDay?: Record<string, number>; plan?: string };
 
 const createSchema = z.object({ name: z.string().min(1).max(50), dailyQuota: z.number().int().min(1).max(1000000).default(1000) });
 const updateSchema = z.object({ id: z.string(), enabled: z.boolean().optional(), dailyQuota: z.number().int().min(1).max(1000000).optional(), name: z.string().min(1).max(50).optional() });
@@ -14,8 +15,23 @@ const updateSchema = z.object({ id: z.string(), enabled: z.boolean().optional(),
 export async function GET(req: Request) {
   if (!isAuthed(req)) return NextResponse.json({ error: '未授权' }, { status: 401 });
   const { items } = readStore<ApiKey>('api-keys.json', []);
+  const today = dayKey();
+  const totals = { usage: 0, today: 0 };
   return NextResponse.json({
-    keys: items.map((k) => ({ ...k, key: mask(k.key, 4, 4) })),
+    keys: items.map((k) => {
+      const usage = Object.values(k.usageByDay || {}).reduce((a, b) => a + b, 0);
+      const todayUsage = k.usageByDay?.[today] || 0;
+      totals.usage += usage;
+      totals.today += todayUsage;
+      return {
+        ...k,
+        key: mask(k.key, 4, 4),
+        usageByDay: undefined, // 明细不下发，避免超长响应
+        usedToday: todayUsage,
+        totalUsage: usage,
+      };
+    }),
+    totals,
   });
 }
 

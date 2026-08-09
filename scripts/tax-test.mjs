@@ -9,7 +9,7 @@ const CSV = `date,symbol,type,qty,priceUsd,counterparty
 2024-06-15,BTC,sell,0.4,61000,binance
 2024-09-01,ETH,income,1.2,2400,ledger-staking
 2024-11-20,ETH,sell,1.2,3100,okx
-2025-02-14,BTC,spend,0.2,96000,TDemoPhishSink11111111111111111111
+2025-02-14,BTC,spend,0.2,96000,1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX
 2025-04-01,USDT,buy,500,1,binance
 BADLINE,XXX,sell,abc,zzz,none`;
 
@@ -60,7 +60,7 @@ const ok = (name, cond, detail = '') => {
   eq('HIFO 已实现盈亏总额', hifo.totals.realizedPnl, -2800 + 8200 + 840);
 
   // 审计联动：spend 对手方命中黑名单种子
-  ok('审计关注标记（黑名单对手方）', fifo.auditFlagCount >= 1 && fifo.details.some((d) => d.auditFlag && d.counterparty === 'TDemoPhishSink11111111111111111111'), `flag=${fifo.auditFlagCount}`);
+  ok('审计关注标记（黑名单对手方）', fifo.auditFlagCount >= 1 && fifo.details.some((d) => d.auditFlag && d.counterparty === '1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX'), `flag=${fifo.auditFlagCount}`);
 
   // 非法输入
   const bad = await fetch(`${BASE}/api/tax/compute`, {

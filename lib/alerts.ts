@@ -58,7 +58,7 @@ export function readAlerts(): AlertSeed[] {
 
   const map = new Map<string, AlertSeed>();
   for (const s of seeds) {
-    if (s && typeof s.address === 'string') map.set(s.address, { ...s, source: 'alerts-seed' });
+    if (s && typeof s.address === 'string') map.set(s.address, { ...s, source: s.source || 'alerts-seed' });
   }
   for (const b of blacklist) {
     const addr = b?.address;
@@ -73,8 +73,8 @@ export function readAlerts(): AlertSeed[] {
       firstSeen: '2024-01-01T00:00:00Z',
       txCount: 0,
       notes: String(b.note || b.label || '黑名单条目'),
-      demo: true,
-      source: 'blacklist',
+      demo: b.source === 'chainsentinel-demo-seed',
+      source: String(b.source || 'blacklist'),
     });
   }
   return [...map.values()];

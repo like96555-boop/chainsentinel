@@ -85,13 +85,13 @@ async function main() {
     );
   }
 
-  // ── 2. 黑名单 red 短路 ────────────────────────────────────────
+  // ── 2. 黑名单 red 短路（真实种子：Ronin Bridge 攻击归集，公开安全事件）──
   {
-    const r = await post('/api/check', { address: 'TDemoPhishSink11111111111111111111' }, groupIp());
+    const r = await post('/api/check', { address: '0x098B716B8Aaf21512996dC57EB0615e2383E2f96' }, groupIp());
     const j = r.json || {};
     report(
       '黑名单命中 → red/5',
-      r.status === 200 && j.level === 'red' && j.score === 5 && j.chain === 'tron',
+      r.status === 200 && j.level === 'red' && j.score === 5 && j.chain === 'eth' && j.blacklist?.sourceLabel,
       `HTTP ${r.status} level=${j.level} score=${j.score} chain=${j.chain} label=${j.blacklist?.label}`
     );
   }

@@ -11,6 +11,20 @@ out/
 !.env.example
 data/secrets*
 data/leads.json
+data/ofac-sdn-cache.json
+
+# 运行时数据（本地运营配置/日志，不入库；种子数据 blacklist.json/alerts.json 保留）
+data/api-keys.json
+data/audit-log.json
+data/orders.json
+data/webhooks.json
+data/banners.json
+data/site-settings.json
+data/smartmoney.json
+data/ai-config.json
+
+# 测试报告（本地产物）
+test-reports/
 
 # misc
 *.log

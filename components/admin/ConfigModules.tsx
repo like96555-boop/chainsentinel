@@ -94,7 +94,11 @@ function ApiKeys() {
           <div key={k.id} className="flex items-center gap-3 rounded-lg border border-cyber-700 bg-cyber-950/50 px-3 py-2">
             <span className="w-36 truncate text-sm text-slate-200">{k.name}</span>
             <span className="font-mono text-xs text-slate-400">{k.key}</span>
-            <span className="text-xs text-slate-500">{k.enabled ? `日配额 ${k.dailyQuota}` : '已停用'}</span>
+            <span className="text-xs text-slate-500">
+              {k.enabled
+                ? `日配额 ${k.dailyQuota} · 今日 ${k.usedToday ?? 0}/${k.dailyQuota}${k.plan ? ` · ${k.plan}` : ''}`
+                : '已停用'}
+            </span>
             <span className="ml-auto flex gap-1.5">
               <button className={btnDanger} title={k.enabled ? '停用' : '启用'} onClick={() => toggle(k)}><Power size={12} /></button>
               <button className={btnDanger} title="吊销" onClick={() => remove(k.id)}><Trash2 size={12} /></button>

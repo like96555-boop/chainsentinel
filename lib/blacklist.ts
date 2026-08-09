@@ -45,6 +45,12 @@ export function sourceLabelOf(source?: string): string {
   switch (source) {
     case 'chainsentinel-demo-seed':
       return '演示种子数据（上线运营后将替换为真实威胁情报）';
+    case 'public-record':
+      return '公开执法/安全事件记录（链上可复核）';
+    case 'ofac-sdn':
+      return '美国财政部 OFAC 制裁名单（官方公开数据）';
+    case 'onchain-heuristic':
+      return '链上特征启发式标记（真实地址，非官方定性）';
     case 'manual':
       return '运营后台人工添加（含人工复核）';
     case 'external-intel':
