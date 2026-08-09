@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { checkSchema } from '@/lib/validation';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
-import { findInBlacklist } from '@/lib/blacklist';
+import { findInBlacklist, sourceLabelOf } from '@/lib/blacklist';
 import { scoreAddress } from '@/lib/tron';
 import {
   detectChain,
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
         '建议立即停止与该地址的一切资金往来。',
       ],
       evidenceLinks: [explorerAddressUrl(chain, address)],
-      blacklist: { label: hit.label, source: hit.source },
+      blacklist: { label: hit.label, source: hit.source, sourceLabel: sourceLabelOf(hit.source) },
       stats: null,
       upstreamReachable: true,
     });

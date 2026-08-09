@@ -345,6 +345,7 @@ export default function ConfigModules({ tab }: { tab: ConfigTab }) {
 
 /* ---------------- 黑名单管理 ---------------- */
 const TYPE_LABELS: Record<string, string> = { phishing: '钓鱼归集', laundering: '洗钱通道', mixer: '混币入口', fraud: '诈骗资金' };
+const SOURCE_LABELS: Record<string, string> = { 'chainsentinel-demo-seed': '演示种子', manual: '人工添加', 'external-intel': '情报源' };
 
 function Blacklist() {
   const [items, setItems] = useState<any[]>([]);
@@ -399,6 +400,7 @@ function Blacklist() {
             <span className="w-16 shrink-0 text-xs text-neon-red">{TYPE_LABELS[b.type] || b.type}</span>
             <span className="font-mono text-xs text-slate-300">{b.address}</span>
             <span className="hidden truncate text-xs text-slate-500 sm:block">{b.label}</span>
+            <span className="shrink-0 rounded border border-cyber-700 px-1.5 py-0.5 text-[10px] text-slate-500" title={b.source || '未标注来源'}>{SOURCE_LABELS[b.source] || '未标注'}</span>
             <button className={`${btnDanger} ml-auto`} onClick={() => remove(b.id)}><Trash2 size={12} /></button>
           </div>
         ))}

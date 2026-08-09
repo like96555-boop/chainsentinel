@@ -12,6 +12,7 @@ interface CheckResult {
   score: number;
   reasons: string[];
   evidenceLinks: string[];
+  blacklist?: { label: string; source?: string; sourceLabel?: string };
 }
 
 interface RecentItem {
@@ -216,6 +217,25 @@ export default function AddressChecker() {
                 </li>
               ))}
             </ul>
+            {/* 数据来源与判定逻辑（透明化） */}
+            <div className="mt-4 rounded-lg border border-cyber-700/70 bg-cyber-950/50 px-3 py-2.5 text-xs leading-relaxed text-slate-400">
+              {result.blacklist ? (
+                <>
+                  <p>
+                    <span className="font-medium text-slate-300">判定依据：</span>命中本地风险标签库（精确地址匹配），标签「{result.blacklist.label}」
+                  </p>
+                  <p>
+                    <span className="font-medium text-slate-300">数据来源：</span>
+                    {result.blacklist.sourceLabel || result.blacklist.source || '未标注'}
+                  </p>
+                </>
+              ) : (
+                <p>
+                  <span className="font-medium text-slate-300">判定逻辑：</span>未命中本地黑名单，按链上公开数据评估（合约识别 / 余额 / 近期交易活跃度），
+                  数据来自 TronGrid / Blockstream / 公共 RPC。
+                </p>
+              )}
+            </div>
             <div className="mt-4 flex flex-wrap items-center gap-3">
               {result.evidenceLinks.map((l) => (
                 <a

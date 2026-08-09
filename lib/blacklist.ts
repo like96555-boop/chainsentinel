@@ -39,3 +39,17 @@ export function findInBlacklist(address: string, chain?: ChainId): BlacklistEntr
     ) || null
   );
 }
+
+/** 来源人话化（数据来源透明：客户能看懂"这地址为什么被标黑、依据来自哪"） */
+export function sourceLabelOf(source?: string): string {
+  switch (source) {
+    case 'chainsentinel-demo-seed':
+      return '演示种子数据（上线运营后将替换为真实威胁情报）';
+    case 'manual':
+      return '运营后台人工添加（含人工复核）';
+    case 'external-intel':
+      return '外部威胁情报源（已接入自动同步）';
+    default:
+      return source && source.length > 0 ? source : '未标注来源';
+  }
+}
