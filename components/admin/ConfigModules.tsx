@@ -350,6 +350,7 @@ const SOURCE_LABELS: Record<string, string> = { 'chainsentinel-demo-seed': '演�
 function Blacklist() {
   const [items, setItems] = useState<any[]>([]);
   const [form, setForm] = useState<any>({ address: '', chain: 'tron', label: '', type: 'phishing', notes: '' });
+  const [bulk, setBulk] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -367,6 +368,21 @@ function Blacklist() {
   async function remove(id: string) {
     const { json } = await jfetch(`/api/admin/blacklist?id=${id}`, 'DELETE');
     if (json?.ok) { setMsg('✅ 已移除'); load(); }
+  }
+
+  async function importBulk() {
+    const lines = bulk.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    if (!lines.length) { setMsg('⚠️ 请粘贴要导入的地址（每行一个）'); return; }
+    const entries = lines.map((l) => {
+      const [address, chain = 'any', label = '外部情报源导入', type = 'phishing'] = l.split(',').map((c) => c.trim());
+      return { address, chain, label, type };
+    });
+    const { res, json } = await jfetch('/api/admin/blacklist/import', 'POST', { entries });
+    if (res.ok) {
+      setMsg(`✅ 导入完成：新增 ${json.added} 条，跳过 ${json.skipped} 条（重复或格式错误，来源=external-intel）`);
+      setBulk('');
+      load();
+    } else setMsg(`⚠️ ${json?.error || '导入失败'}`);
   }
 
   return (
@@ -393,6 +409,11 @@ function Blacklist() {
         <input className={inputCls} placeholder="备注（可选）" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
       </div>
       <button className={`${btnPrimary} mt-3`} onClick={save}><Plus size={13} /> 加入黑名单</button>
+      <div className="mt-4 rounded-lg border border-cyber-700/70 bg-cyber-950/40 p-3">
+        <p className="text-xs text-slate-500">批量导入（外部情报源，来源自动标注 external-intel）：每行一个地址，可加 链,标签,类型</p>
+        <textarea value={bulk} onChange={(e) => setBulk(e.target.value)} rows={3} spellCheck={false} placeholder={'T地址或0x地址或bc1地址\n0x地址2,eth,钓鱼地址,phishing'} className="mt-2 w-full rounded-lg border border-cyber-700 bg-cyber-950/70 p-2 font-mono text-xs text-slate-200 outline-none focus:border-neon-cyan/60" />
+        <button className={`${btnPrimary} mt-2`} onClick={importBulk}>📥 批量导入</button>
+      </div>
       <div className="mt-4 space-y-2">
         {items.length === 0 && <p className="text-xs text-slate-500">黑名单为空。</p>}
         {items.map((b) => (

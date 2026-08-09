@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start -p 3000",
     "test": "node scripts/regression.mjs && node scripts/security-test.mjs && node scripts/stress-test.mjs",
-    "tax:test": "node scripts/tax-test.mjs"
+    "tax:test": "node scripts/tax-test.mjs",
+    "intel:sync": "node scripts/intel-sync.mjs"
   },
   "dependencies": {
     "framer-motion": "^11.11.17",
