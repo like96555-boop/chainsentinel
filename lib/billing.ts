@@ -38,6 +38,28 @@ export interface PlanDef {
   /** 每令牌日配额 */
   quotaPerDay: number;
   priceId: string; // Stripe Price ID（未配置时留空，mock 模式忽略）
+  /** 促销价（USD/月）；与 promoEndsAt 同时生效时前台按促销价收款 */
+  promoPriceUsd?: number;
+  /** 促销截止时间戳（ms） */
+  promoEndsAt?: number;
+}
+
+/** 当前生效价格：促销期内返回促销价，否则原价 */
+export function effectivePrice(p: PlanDef): number {
+  if (
+    typeof p.promoPriceUsd === 'number' &&
+    p.promoPriceUsd >= 0 &&
+    typeof p.promoEndsAt === 'number' &&
+    p.promoEndsAt > Date.now()
+  ) {
+    return p.promoPriceUsd;
+  }
+  return p.priceMonthlyUsd;
+}
+
+/** 是否促销中 */
+export function isPromoting(p: PlanDef): boolean {
+  return effectivePrice(p) !== p.priceMonthlyUsd;
 }
 
 /** 套餐定义（定价可在后台维护：data/billing-plans.json；未配置时用以下默认值） */

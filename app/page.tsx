@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Radar,
@@ -127,40 +127,54 @@ const FEATURES = [
   },
 ];
 
-const PLANS = [
-  {
-    name: '社区版',
-    price: '免费',
-    unit: '',
-    cta: '立即使用',
-    highlight: false,
-    items: ['每日 100 次地址查询', '基础黑名单匹配', '网页端红绿灯报告'],
-  },
-  {
-    name: '专业版',
-    price: '¥9,800',
-    unit: '/年',
-    cta: '升级专业版',
-    highlight: true,
-    items: [
-      '无限次查询 + REST API',
-      'Webhook 实时告警',
-      '聪明钱追踪 🔒',
-      '地址簇关联分析 🔒',
-      '税务合规报表导出 🔒',
-    ],
-  },
-  {
-    name: '商业授权',
-    price: '¥50,000',
-    unit: ' 起',
-    cta: '联系销售',
-    highlight: false,
-    items: ['私有化部署', '源码授权', '定制风险标签库', '专属合规顾问'],
-  },
+interface PricingItem {
+  id: string;
+  name: string;
+  price: string;
+  unit: string;
+  highlight: boolean;
+  cta: string;
+  items: string[];
+  original?: string;
+  promoting?: boolean;
+}
+
+const PRICING_FALLBACK: PricingItem[] = [
+  { id: 'free', name: '社区版', price: '$0', unit: '', highlight: false, cta: '立即使用', items: ['每日 100 次地址查询', '基础黑名单匹配', '网页端红绿灯报告'] },
+  { id: 'pro', name: '专业版', price: '$29', unit: '/月', highlight: true, cta: '升级专业版', items: ['1 个 API 令牌 · 1000 次/日', 'Webhook 实时告警', '聪明钱追踪 🔒', '税务中心 Pro 🔒', 'Stripe / USDT 双支付'] },
+  { id: 'business', name: '商业版', price: '$199', unit: '/月', highlight: false, cta: '联系销售', items: ['5 个 API 令牌 · 10000 次/日', '全部 Pro 功能', '优先支持', '定制风险标签库'] },
 ];
 
 export default function LandingPage() {
+  const [pricing, setPricing] = useState(PRICING_FALLBACK);
+
+  // 定价与促销后台可维护：从 /api/billing/plans 拉取，促销期自动显示划线价
+  useEffect(() => {
+    fetch('/api/billing/plans')
+      .then((r) => r.json())
+      .then((j) => {
+        if (!Array.isArray(j?.plans)) return;
+        const map: Record<string, { name: string; price?: string; unit?: string; cta: string; highlight: boolean; items: string[]; original?: string; promoting?: boolean }> = {
+          free: { name: '社区版', cta: '立即使用', highlight: false, items: ['每日 100 次地址查询', '基础黑名单匹配', '网页端红绿灯报告'] },
+          pro: { name: '专业版', cta: '升级专业版', highlight: true, items: ['1 个 API 令牌 · 1000 次/日', 'Webhook 实时告警', '聪明钱追踪 🔒', '税务中心 Pro 🔒', 'Stripe / USDT 双支付'] },
+          business: { name: '商业版', cta: '联系销售', highlight: false, items: ['5 个 API 令牌 · 10000 次/日', '全部 Pro 功能', '优先支持', '定制风险标签库'] },
+        };
+        const next = j.plans.map((p: any) => {
+          const base = map[p.id] || { name: p.name, cta: '立即订阅', highlight: false, items: [] };
+          return {
+            id: p.id,
+            ...base,
+            price: p.priceMonthlyUsd === 0 ? '$0' : `$${p.priceMonthlyUsd}`,
+            unit: p.priceMonthlyUsd === 0 ? '' : '/月',
+            original: p.promoting ? `$${p.originalPriceUsd}` : undefined,
+            promoting: p.promoting,
+          };
+        });
+        setPricing(next);
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <main className="grid-bg">
       {/* Hero */}
@@ -281,7 +295,7 @@ export default function LandingPage() {
           透明定价
         </motion.h2>
         <div className="mt-10 grid gap-6 sm:grid-cols-3">
-          {PLANS.map((p, i) => (
+          {pricing.map((p, i) => (
             <motion.div
               key={p.name}
               {...fadeUp}
@@ -295,8 +309,12 @@ export default function LandingPage() {
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold">{p.name}</h3>
                 {p.highlight && <Lock size={15} className="text-neon-yellow" />}
+                {p.promoting && (
+                  <span className="rounded-full bg-neon-cyan/15 px-2 py-0.5 text-[10px] font-semibold text-neon-cyan">限时促销</span>
+                )}
               </div>
               <p className="mt-4 text-3xl font-extrabold text-neon-cyan">
+                {p.original && <span className="mr-2 text-lg font-normal text-slate-500 line-through">{p.original}</span>}
                 {p.price}
                 <span className="text-sm font-normal text-slate-400">{p.unit}</span>
               </p>

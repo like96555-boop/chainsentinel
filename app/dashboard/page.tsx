@@ -19,9 +19,17 @@ interface Plan {
   id: string;
   name: string;
   priceMonthlyUsd: number;
+  originalPriceUsd?: number;
+  promoting?: boolean;
   tokenCount: number;
   quotaPerDay: number;
 }
+
+const PLANS_FALLBACK: Plan[] = [
+  { id: 'free', name: '免费版', priceMonthlyUsd: 0, tokenCount: 0, quotaPerDay: 100 },
+  { id: 'pro', name: '专业版', priceMonthlyUsd: 29, tokenCount: 1, quotaPerDay: 1000 },
+  { id: 'business', name: '商业版', priceMonthlyUsd: 199, tokenCount: 5, quotaPerDay: 10000 },
+];
 
 interface TokenUsage {
   token: string;
@@ -35,12 +43,6 @@ interface TokenUsage {
   lastUsedAt: number;
   trend: Array<{ date: string; count: number }>;
 }
-
-const PLANS_FALLBACK: Plan[] = [
-  { id: 'free', name: '免费版', priceMonthlyUsd: 0, tokenCount: 0, quotaPerDay: 100 },
-  { id: 'pro', name: '专业版', priceMonthlyUsd: 29, tokenCount: 1, quotaPerDay: 1000 },
-  { id: 'business', name: '商业版', priceMonthlyUsd: 199, tokenCount: 5, quotaPerDay: 10000 },
-];
 
 export default function DashboardPage() {
   const [plans, setPlans] = useState<Plan[]>(PLANS_FALLBACK);
@@ -187,11 +189,17 @@ export default function DashboardPage() {
                   <span className="text-sm font-semibold text-slate-200">{p.name}</span>
                   {active && <CircleCheck size={16} className="text-[#7170ff]" />}
                 </div>
-                <div className="mt-3">
+                <div className="mt-3 flex items-baseline gap-2">
+                  {p.promoting && p.originalPriceUsd !== undefined && (
+                    <span className="text-sm text-slate-500 line-through">${p.originalPriceUsd}</span>
+                  )}
                   <span className="text-2xl font-bold text-slate-100">
                     {p.priceMonthlyUsd === 0 ? '免费' : `$${p.priceMonthlyUsd}`}
                   </span>
                   <span className="text-xs text-slate-500">{p.priceMonthlyUsd === 0 ? '' : ' / 月'}</span>
+                  {p.promoting && (
+                    <span className="rounded-full bg-[#7170ff]/20 px-2 py-0.5 text-[10px] font-semibold text-[#9d8cff]">限时促销</span>
+                  )}
                 </div>
                 <ul className="mt-4 space-y-2 text-xs text-slate-400">
                   <li className="flex items-center gap-2">

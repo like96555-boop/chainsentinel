@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { planOf } from '@/lib/billing';
+import { planOf, effectivePrice } from '@/lib/billing';
 import { createCheckoutSession, isMockMode } from '@/lib/stripe';
 import { createOrder, updateOrder } from '@/lib/orders';
 import { getUsdtConfig } from '@/lib/usdt';
@@ -29,8 +29,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: '免费版无需订阅，直接使用即可' }, { status: 400 });
   }
 
-  // 1) 先落本地订单（pending）
-  const order = createOrder({ planId: plan.id, customerEmail: parsed.data.email, amountUsd: plan.priceMonthlyUsd });
+  // 1) 先落本地订单（pending）——金额按当前生效价（促销期内按促销价）
+  const amountUsd = effectivePrice(plan);
+  const order = createOrder({ planId: plan.id, customerEmail: parsed.data.email, amountUsd });
 
   // 2a) USDT 非托管支付：返回收款地址 + 应到金额（1 USDT ≈ 1 USD），由客户链上打款
   if (parsed.data.paymentMethod === 'usdt') {
@@ -42,17 +43,17 @@ export async function POST(req: Request) {
         { status: 503 }
       );
     }
-    updateOrder(order.id, { method: 'usdt', amountUsdt: plan.priceMonthlyUsd });
+    updateOrder(order.id, { method: 'usdt', amountUsdt: amountUsd });
     return NextResponse.json({
       ok: true,
       orderId: order.id,
       method: 'usdt',
       payTo: {
         address: cfg.address,
-        amountUsdt: plan.priceMonthlyUsd,
+        amountUsdt: amountUsd,
         contract: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
         network: 'TRON (TRC-20)',
-        note: `请向上述地址转入 ${plan.priceMonthlyUsd} USDT（TRC-20）。到账后自动激活「${plan.name}」。非托管支付：资金直接进入运营方钱包，平台不托管。`,
+        note: `请向上述地址转入 ${amountUsd} USDT（TRC-20）。到账后自动激活「${plan.name}」。非托管支付：资金直接进入运营方钱包，平台不托管。`,
       },
     });
   }

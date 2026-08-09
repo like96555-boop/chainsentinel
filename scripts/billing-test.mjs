@@ -194,6 +194,30 @@ function sign(payload, secret, ts = Math.floor(Date.now() / 1000)) {
   const usdtRestored = (await jfetch('/api/admin/billing-plans', { headers: { cookie } })).j?.usdt?.address;
   ok('USDT 测试数据已清理且运营配置恢复', usdtRestored === usdtCfgBefore, `restored=${usdtRestored || '(空)'}`);
 
+  // ── 13) 促销功能（后台可维护定价/促销）────────────────────────
+  const promoEnds = Date.now() + 7 * 86_400_000;
+  const setPromo = await jfetch('/api/admin/billing-plans', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json', cookie },
+    body: JSON.stringify({ id: 'pro', promoPriceUsd: 19, promoEndsAt: promoEnds }),
+  });
+  ok('后台设置促销价 19', setPromo.r.status === 200);
+  const promoPlans = await (await fetch(`${BASE}/api/billing/plans`, { headers: { 'X-Forwarded-For': '10.88.1.1' } })).json();
+  const promoPro = promoPlans.plans.find((p) => p.id === 'pro');
+  ok('前台促销生效（19 + 划线 29）', promoPro.priceMonthlyUsd === 19 && promoPro.originalPriceUsd === 29 && promoPro.promoting === true, `price=${promoPro.priceMonthlyUsd} orig=${promoPro.originalPriceUsd}`);
+  // 促销期内下单按促销价收款（USDT 路径金额断言）
+  const promoOrder = await jfetch('/api/billing/checkout', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ plan: 'pro', email: 'promo@test.hk', paymentMethod: 'usdt' }),
+  });
+  ok('促销期下单按促销价 19 USDT', promoOrder.r.status === 200 && promoOrder.j?.payTo?.amountUsdt === 19, `amount=${promoOrder.j?.payTo?.amountUsdt}`);
+  // 清理：删除促销订单 + 恢复无促销
+  const promoOrderId = promoOrder.j?.orderId;
+  const promoOrdersRaw = JSON.parse(fs.readFileSync(ordersPath, 'utf8'));
+  fs.writeFileSync(ordersPath, JSON.stringify({ items: (promoOrdersRaw.items || []).filter((o) => o.id !== promoOrderId), updatedAt: Date.now() }, null, 2), 'utf8');
+  await jfetch('/api/admin/billing-plans', { method: 'PUT', headers: { 'Content-Type': 'application/json', cookie }, body: JSON.stringify({ id: 'pro', promoPriceUsd: null, promoEndsAt: null }) });
+  const restored = await (await fetch(`${BASE}/api/billing/plans`, { headers: { 'X-Forwarded-For': '10.88.1.2' } })).json();
+  ok('促销已恢复（29 无划线）', restored.plans.find((p) => p.id === 'pro').promoting === false, `price=${restored.plans.find((p) => p.id === 'pro').priceMonthlyUsd}`);
+
   console.log(`\n===== 计量扣费测试: ${pass}/${pass + fail} 通过 =====`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error('ERR', e.message); process.exit(1); });

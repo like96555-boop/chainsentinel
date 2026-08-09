@@ -128,13 +128,22 @@ node scripts/billing-test.mjs  # 计量扣费 33（含 USDT 非托管收款；�
 **开源免费、商用双轨** —— 你的每一次使用都在帮助链哨成长：
 
 - ⭐ **Star 本项目**：让更多需要链上风控的人找到它
-- 🐛 **提 Issue / PR**：一起把 KYT 做得更准
-- ☕ **GitHub Sponsors 赞助**：<https://github.com/sponsors>（个人开发者维护不易）
+- 🐛 **提 Issue / PR**：一起把 KYT 做得更准（GitHub Issues 就是最好的留言板）
+- ☕ **GitHub Sponsors 赞助**：<https://github.com/sponsors>
+- 🪙 **USDT 打赏**（TRC-20，非托管直达维护者）：`TQ2VnvpsYyfyjFQMkJ1TdkDc4aAe1joAs1`
 - 💼 **专业版订阅**（托管 SaaS）：$29/月 —— 免部署、每日制裁名单自动更新、API 高配额
 - 🏢 **商业授权**：GPL 闭源商用合规、定制部署、合规落地陪跑
-- 📮 **联系**：GitHub Issues / 仓库作者邮箱
+- 📮 **站内留言**：仓库 Issues 直接留言；或通过站点首页咨询表单联系（RWA/定制/合作需求）
 
 > 你的 Star 是开源项目最大的动力。**用起来，就是最好的支持。**
+
+## ✦ 市场定位（为什么是这个价格）
+
+| 层级 | 代表 | 定价 | 链哨的位置 |
+|---|---|---|---|
+| 免费工具 | GoPlus 恶意地址 API / 慢雾 MistTrack Light | 免费 | ✅ 社区版免费层对标 |
+| **轻量 KYT（我们的目标区间）** | **ChainSentinel 专业版** | **$29/月** | **对月流水数万-数十万 USDT 的商户，是一次拦截黑钱的成本** |
+| 企业级 | Chainalysis / Elliptic / 慢雾 KYT | 数万美元/年（销售报价） | 商业版 $199/月 + 定制 |
 
 ## ✦ 免责声明
 

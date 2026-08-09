@@ -343,8 +343,15 @@ function BillingPlans() {
   const [plans, setPlans] = useState<any[]>([]);
   const [stripe, setStripe] = useState<any>(null);
   const [hints, setHints] = useState<{ webhookHint?: string; paymentMethodsHint?: string }>({});
-  const [drafts, setDrafts] = useState<Record<string, { price: string; quota: string; tokens: string; priceId: string }>>({});
+  const [drafts, setDrafts] = useState<Record<string, { price: string; quota: string; tokens: string; priceId: string; promoPrice: string; promoEnds: string }>>({});
   const [msg, setMsg] = useState<string | null>(null);
+
+  const toLocalInput = (ts?: number) => {
+    if (!ts) return '';
+    const d = new Date(ts);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
 
   const load = useCallback(async () => {
     const { json } = await jfetch('/api/admin/billing-plans');
@@ -352,7 +359,7 @@ function BillingPlans() {
       setPlans(json.plans);
       const d: typeof drafts = {};
       json.plans.forEach((p: any) => {
-        d[p.id] = { price: String(p.priceMonthlyUsd), quota: String(p.quotaPerDay), tokens: String(p.tokenCount), priceId: p.priceId || '' };
+        d[p.id] = { price: String(p.priceMonthlyUsd), quota: String(p.quotaPerDay), tokens: String(p.tokenCount), priceId: p.priceId || '', promoPrice: p.promoPriceUsd !== undefined && p.promoPriceUsd !== null ? String(p.promoPriceUsd) : '', promoEnds: toLocalInput(p.promoEndsAt) };
       });
       setDrafts(d);
     }
@@ -370,6 +377,14 @@ function BillingPlans() {
     if (d.quota !== '') body.quotaPerDay = Number(d.quota);
     if (d.tokens !== '') body.tokenCount = Number(d.tokens);
     body.priceId = d.priceId.trim();
+    // 促销：促销价 + 截止时间（两者齐全才生效；清空促销价=结束促销）
+    if (d.promoPrice !== '' && d.promoEnds !== '') {
+      body.promoPriceUsd = Number(d.promoPrice);
+      body.promoEndsAt = new Date(d.promoEnds).getTime();
+    } else {
+      body.promoPriceUsd = null;
+      body.promoEndsAt = null;
+    }
     const { res, json } = await jfetch('/api/admin/billing-plans', 'PUT', body);
     setMsg(res.ok ? `✅ ${id} 套餐已保存` : `❌ ${json?.error || '保存失败'}`);
     if (res.ok) load();
@@ -415,6 +430,8 @@ function BillingPlans() {
             <tr className="border-b border-cyber-700 text-xs text-slate-500">
               <th className="px-3 py-2.5">套餐</th>
               <th className="px-3 py-2.5">月费 (USD)</th>
+              <th className="px-3 py-2.5">促销价</th>
+              <th className="px-3 py-2.5">促销截止</th>
               <th className="px-3 py-2.5">令牌数</th>
               <th className="px-3 py-2.5">日配额</th>
               <th className="px-3 py-2.5">Stripe Price ID</th>
@@ -423,7 +440,7 @@ function BillingPlans() {
           </thead>
           <tbody>
             {plans.map((p) => {
-              const d = drafts[p.id] || { price: '0', quota: '0', tokens: '0', priceId: '' };
+              const d = drafts[p.id] || { price: '0', quota: '0', tokens: '0', priceId: '', promoPrice: '', promoEnds: '' };
               return (
                 <tr key={p.id} className="border-b border-cyber-800">
                   <td className="px-3 py-2.5">
@@ -434,13 +451,19 @@ function BillingPlans() {
                     <input value={d.price} onChange={(e) => setDraft(p.id, 'price', e.target.value)} className={`${inputCls} w-20`} inputMode="numeric" />
                   </td>
                   <td className="px-3 py-2.5">
+                    <input value={d.promoPrice} onChange={(e) => setDraft(p.id, 'promoPrice', e.target.value)} placeholder="如 19" className={`${inputCls} w-20`} inputMode="numeric" />
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <input type="datetime-local" value={d.promoEnds} onChange={(e) => setDraft(p.id, 'promoEnds', e.target.value)} className={`${inputCls} w-44`} />
+                  </td>
+                  <td className="px-3 py-2.5">
                     <input value={d.tokens} onChange={(e) => setDraft(p.id, 'tokens', e.target.value)} className={`${inputCls} w-16`} inputMode="numeric" />
                   </td>
                   <td className="px-3 py-2.5">
                     <input value={d.quota} onChange={(e) => setDraft(p.id, 'quota', e.target.value)} className={`${inputCls} w-28`} inputMode="numeric" />
                   </td>
                   <td className="px-3 py-2.5">
-                    <input value={d.priceId} onChange={(e) => setDraft(p.id, 'priceId', e.target.value)} placeholder="price_xxx（Stripe 产品价格）" className={`${inputCls} w-48 font-mono text-[11px]`} />
+                    <input value={d.priceId} onChange={(e) => setDraft(p.id, 'priceId', e.target.value)} placeholder="price_xxx" className={`${inputCls} w-44 font-mono text-[11px]`} />
                   </td>
                   <td className="px-3 py-2.5">
                     <button className={btnPrimary} onClick={() => save(p.id)}><Save size={12} /> 保存</button>

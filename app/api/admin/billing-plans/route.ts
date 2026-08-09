@@ -18,6 +18,8 @@ const planUpdateSchema = z
     quotaPerDay: z.number().int().min(1).max(100000000).optional(),
     priceId: z.string().max(128).optional(),
     usdtAddress: z.string().max(64).optional(),
+    promoPriceUsd: z.number().int().min(0).max(100000).nullable().optional(),
+    promoEndsAt: z.number().int().min(0).nullable().optional(),
   })
   .refine((o) => o.id !== undefined || o.usdtAddress !== undefined, {
     message: '至少提供套餐 id 或 USDT 收款地址之一',
