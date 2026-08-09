@@ -46,10 +46,15 @@ export default function DashboardPage() {
   const [plans, setPlans] = useState<Plan[]>(PLANS_FALLBACK);
   const [selected, setSelected] = useState<string>('pro');
   const [email, setEmail] = useState('');
+  const [method, setMethod] = useState<'stripe' | 'usdt'>('stripe');
   const [submitting, setSubmitting] = useState(false);
   const [subResult, setSubResult] = useState<{ tokens: Array<{ key: string; name: string }>; checkoutUrl?: string; mock?: boolean; orderId?: string } | null>(null);
   const [subError, setSubError] = useState('');
   const [copied, setCopied] = useState('');
+  // USDT 非托管支付
+  const [usdtOrder, setUsdtOrder] = useState<{ orderId: string; address: string; amountUsdt: number; contract?: string; network?: string; note?: string } | null>(null);
+  const [usdtState, setUsdtState] = useState<'pending' | 'paid' | 'checking'>('pending');
+  const [usdtMsg, setUsdtMsg] = useState('');
 
   // 我的令牌
   const [queryToken, setQueryToken] = useState('');
@@ -68,14 +73,20 @@ export default function DashboardPage() {
     setSubmitting(true);
     setSubError('');
     setSubResult(null);
+    setUsdtOrder(null);
     try {
       const r = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: selected, email }),
+        body: JSON.stringify({ plan: selected, email, paymentMethod: method }),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || '创建订阅失败');
+      // USDT 非托管：展示收款地址 + 金额，等待链上到账
+      if (j.method === 'usdt' && j.payTo) {
+        setUsdtOrder({ orderId: j.orderId, address: j.payTo.address, amountUsdt: j.payTo.amountUsdt, contract: j.payTo.contract, network: j.payTo.network, note: j.payTo.note });
+        return;
+      }
       if (j.checkoutUrl && !j.mock) {
         window.location.href = j.checkoutUrl; // 真实 Stripe Checkout 跳转
         return;
@@ -90,6 +101,36 @@ export default function DashboardPage() {
       setSubmitting(false);
     }
   };
+
+  /** USDT 到账轮询（手动 + 自动 12s） */
+  const checkUsdt = async () => {
+    if (!usdtOrder) return;
+    setUsdtState('checking');
+    setUsdtMsg('');
+    try {
+      const r = await fetch(`/api/billing/usdt/status?order=${encodeURIComponent(usdtOrder.orderId)}`);
+      const j = await r.json();
+      if (j.status === 'paid') {
+        setUsdtState('paid');
+        setSubResult({ tokens: j.tokens || [], orderId: j.orderId });
+        return;
+      }
+      setUsdtState('pending');
+      setUsdtMsg(j.error || '等待到账…');
+    } catch {
+      setUsdtState('pending');
+      setUsdtMsg('查询失败，请稍后重试');
+    }
+  };
+
+  useEffect(() => {
+    if (!usdtOrder) return;
+    const timer = setInterval(() => {
+      if (usdtState !== 'paid') checkUsdt();
+    }, 12000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usdtOrder, usdtState]);
 
   const queryUsage = async () => {
     setUsageLoading(true);
@@ -168,26 +209,86 @@ export default function DashboardPage() {
         </div>
 
         {/* 订阅操作 */}
-        <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-cyber-700 bg-cyber-900/60 p-5 sm:flex-row sm:items-end">
-          <div className="flex-1">
-            <label className="mb-1.5 block text-xs text-slate-400">订阅邮箱（接收账单与令牌）</label>
-            <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@company.com"
-              className="w-full rounded-xl border border-cyber-700 bg-cyber-950/60 px-4 py-2.5 text-sm text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-[#7170ff]/60"
-            />
+        <div className="mt-6 rounded-2xl border border-cyber-700 bg-cyber-900/60 p-5">
+          <div className="mb-4">
+            <label className="mb-2 block text-xs text-slate-400">支付方式</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setMethod('stripe')}
+                className={`flex-1 rounded-xl border px-4 py-2.5 text-sm transition sm:flex-none ${method === 'stripe' ? 'border-[#7170ff]/70 bg-[#7170ff]/10 text-slate-100' : 'border-cyber-700 text-slate-400 hover:border-cyber-600'}`}
+              >
+                💳 银行卡 / Apple Pay / FPS（Stripe）
+              </button>
+              <button
+                onClick={() => setMethod('usdt')}
+                className={`flex-1 rounded-xl border px-4 py-2.5 text-sm transition sm:flex-none ${method === 'usdt' ? 'border-[#7170ff]/70 bg-[#7170ff]/10 text-slate-100' : 'border-cyber-700 text-slate-400 hover:border-cyber-600'}`}
+              >
+                🟢 USDT（TRC-20 非托管）
+              </button>
+            </div>
+            {method === 'usdt' && (
+              <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+                直接向运营方 TRON 钱包打款 USDT（TRC-20），链上到账后自动激活。非托管：资金直达运营方钱包，平台不托管、零手续费。
+              </p>
+            )}
           </div>
-          <button
-            onClick={subscribe}
-            disabled={submitting || !email || selected === 'free'}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#7170ff] to-[#9d8cff] px-6 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {submitting ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />}
-            {submitting ? '创建中…' : '立即订阅'}
-          </button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <label className="mb-1.5 block text-xs text-slate-400">订阅邮箱（接收账单与令牌）</label>
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.com"
+                className="w-full rounded-xl border border-cyber-700 bg-cyber-950/60 px-4 py-2.5 text-sm text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-[#7170ff]/60"
+              />
+            </div>
+            <button
+              onClick={subscribe}
+              disabled={submitting || !email || selected === 'free'}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#7170ff] to-[#9d8cff] px-6 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {submitting ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />}
+              {submitting ? '创建中…' : '立即订阅'}
+            </button>
+          </div>
         </div>
         {subError && <p className="mt-3 text-sm text-red-400">{subError}</p>}
+
+        {/* USDT 非托管支付：收款信息 + 到账轮询 */}
+        {usdtOrder && usdtState !== 'paid' && (
+          <div className="mt-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5">
+            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-emerald-300">
+              <Check size={16} /> 请向以下地址转入 USDT（{usdtOrder.orderId}）
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <div className="mb-1 text-xs text-slate-400">收款地址（TRON / TRC-20）</div>
+                <div className="flex items-center gap-2 rounded-xl border border-cyber-700 bg-cyber-950/60 px-3 py-2.5">
+                  <code className="flex-1 truncate font-mono text-xs text-emerald-300">{usdtOrder.address}</code>
+                  <button onClick={() => copy(usdtOrder.address)} className="rounded-md p-1.5 text-slate-400 transition hover:bg-cyber-700 hover:text-emerald-300">
+                    {copied === usdtOrder.address.slice(0, 12) ? <Check size={14} /> : <Copy size={14} />}
+                  </button>
+                </div>
+                <p className="mt-1.5 text-[11px] text-slate-500">{usdtOrder.contract}</p>
+              </div>
+              <div>
+                <div className="mb-1 text-xs text-slate-400">应到金额</div>
+                <div className="rounded-xl border border-cyber-700 bg-cyber-950/60 px-3 py-2.5 text-lg font-bold text-slate-100">
+                  {usdtOrder.amountUsdt} <span className="text-xs font-normal text-slate-400">USDT（TRC-20）</span>
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <button onClick={checkUsdt} disabled={usdtState === 'checking'} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-emerald-500/40 px-4 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/10 disabled:opacity-50">
+                    {usdtState === 'checking' ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                    {usdtState === 'checking' ? '查询中…' : '我已打款，查询到账'}
+                  </button>
+                  <span className="text-[11px] text-slate-500">每 12 秒自动检测</span>
+                </div>
+                {usdtMsg && <p className="mt-2 text-[11px] text-slate-400">{usdtMsg}</p>}
+              </div>
+            </div>
+            <p className="mt-3 text-[11px] leading-relaxed text-slate-500">{usdtOrder.note}</p>
+          </div>
+        )}
 
         {/* 订阅成功 → 令牌一次性展示 */}
         {subResult && (

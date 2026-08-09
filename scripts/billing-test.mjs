@@ -143,6 +143,57 @@ function sign(payload, secret, ts = Math.floor(Date.now() / 1000)) {
   }
   ok('测试数据已清理', true);
 
+  // ── 12) USDT 非托管收款 ─────────────────────────────────────
+  const USDT_ADDR = 'TU4vEruvZwLLkSfV9bNw12EJTPvNr7Pvaa';
+  // 12.0 保存当前运营配置（测试后恢复，绝不清掉真实收款地址）
+  const usdtCfgBefore = (await jfetch('/api/admin/billing-plans', { headers: { cookie } })).j?.usdt?.address || '';
+  // 12.1 未配置收款地址：USDT 通道关闭（503）
+  await jfetch('/api/admin/billing-plans', { method: 'PUT', headers: { 'Content-Type': 'application/json', cookie }, body: JSON.stringify({ usdtAddress: '' }) });
+  const usdtClosed = await jfetch('/api/billing/checkout', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ plan: 'pro', email: 'usdt@test.hk', paymentMethod: 'usdt' }),
+  });
+  ok('USDT 通道未配置 → 503', usdtClosed.r.status === 503, `status=${usdtClosed.r.status}`);
+  // 12.2 后台配置收款地址
+  const cfgUsdt = await jfetch('/api/admin/billing-plans', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json', cookie },
+    body: JSON.stringify({ usdtAddress: USDT_ADDR }),
+  });
+  ok('后台配置 USDT 收款地址', cfgUsdt.r.status === 200 && cfgUsdt.j?.usdt?.configured === true);
+  // 12.3 USDT 下单 → 返回收款信息
+  const usdtOrder = await jfetch('/api/billing/checkout', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ plan: 'pro', email: 'usdt@test.hk', paymentMethod: 'usdt' }),
+  });
+  ok('USDT 下单返回收款信息', usdtOrder.r.status === 200 && usdtOrder.j?.method === 'usdt' && usdtOrder.j?.payTo?.address === USDT_ADDR, `amount=${usdtOrder.j?.payTo?.amountUsdt}`);
+  const usdtOrderId = usdtOrder.j?.orderId;
+  // 12.4 GET 状态（真实查链）→ 响应合法（pending 或 paid 均属正常响应，不依赖链上状态）
+  const usdtGet = await jfetch(`/api/billing/usdt/status?order=${encodeURIComponent(usdtOrderId)}`);
+  ok('USDT 状态查询响应合法', usdtGet.r.status === 200 && (usdtGet.j?.status === 'pending' || usdtGet.j?.status === 'paid'), `status=${usdtGet.j?.status}`);
+  // 12.5 override 注入到账 → 订单 paid + 令牌激活（自包含确定路径）
+  const usdtPaid = await jfetch('/api/billing/usdt/status', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ order: usdtOrderId, txId: 'tx_test_usdt_' + Date.now().toString(36), amountUsdt: 29 }),
+  });
+  ok('USDT 到账确认 → paid + 令牌激活', usdtPaid.r.status === 200 && usdtPaid.j?.status === 'paid' && Array.isArray(usdtPaid.j?.tokens) && usdtPaid.j?.tokens?.length === 1, `tokens=${usdtPaid.j?.tokens?.length}`);
+  const usdtTokenId = usdtPaid.j?.tokens?.[0]?.id;
+  // 12.6 幂等：重复确认不重复激活（仍 paid，令牌数不变）
+  const keysBefore = (await jfetch('/api/admin/keys', { headers: { cookie } })).j?.keys?.length;
+  const usdtAgain = await jfetch('/api/billing/usdt/status', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ order: usdtOrderId, txId: 'tx_test_dup', amountUsdt: 29 }),
+  });
+  const keysAfter = (await jfetch('/api/admin/keys', { headers: { cookie } })).j?.keys?.length;
+  ok('USDT 幂等：重复确认不重复激活', usdtAgain.r.status === 200 && usdtAgain.j?.status === 'paid' && keysAfter === keysBefore, `keys ${keysBefore}→${keysAfter}`);
+  // 12.7 清理：删除 USDT 测试令牌 + 订单 + 恢复运营原配置（真实地址）
+  await jfetch(`/api/admin/keys?id=${usdtTokenId}`, { method: 'DELETE', headers: { cookie } });
+  const ordersRaw2 = JSON.parse(fs.readFileSync(ordersPath, 'utf8'));
+  const orders2 = (ordersRaw2.items || []).filter((o) => o.id !== usdtOrderId);
+  fs.writeFileSync(ordersPath, JSON.stringify({ items: orders2, updatedAt: Date.now() }, null, 2), 'utf8');
+  await jfetch('/api/admin/billing-plans', { method: 'PUT', headers: { 'Content-Type': 'application/json', cookie }, body: JSON.stringify({ usdtAddress: usdtCfgBefore }) });
+  const usdtRestored = (await jfetch('/api/admin/billing-plans', { headers: { cookie } })).j?.usdt?.address;
+  ok('USDT 测试数据已清理且运营配置恢复', usdtRestored === usdtCfgBefore, `restored=${usdtRestored || '(空)'}`);
+
   console.log(`\n===== 计量扣费测试: ${pass}/${pass + fail} 通过 =====`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error('ERR', e.message); process.exit(1); });

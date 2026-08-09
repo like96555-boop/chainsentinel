@@ -3,7 +3,7 @@ import path from 'path';
 import { encrypt, decrypt, EncryptedBlob } from './crypto';
 import { getMasterKey } from './master-key';
 
-export const SECRET_KEYS = ['KIMI_API_KEY', 'KIMI_BASE_URL', 'TRONGRID_API_KEY'] as const;
+export const SECRET_KEYS = ['KIMI_API_KEY', 'KIMI_BASE_URL', 'TRONGRID_API_KEY', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET'] as const;
 export type SecretKey = (typeof SECRET_KEYS)[number];
 
 const STORE_PATH = path.join(process.cwd(), 'data', 'secrets.enc.json');

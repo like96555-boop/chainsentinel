@@ -40,15 +40,31 @@ export interface PlanDef {
   priceId: string; // Stripe Price ID（未配置时留空，mock 模式忽略）
 }
 
-/** 套餐定义（定价可在后台调整；Stripe Price ID 由运营在后台密钥管理中配置后生效） */
-export const PLANS: PlanDef[] = [
+/** 套餐定义（定价可在后台维护：data/billing-plans.json；未配置时用以下默认值） */
+export const DEFAULT_PLANS: PlanDef[] = [
   { id: 'free', name: '免费版', priceMonthlyUsd: 0, tokenCount: 0, quotaPerDay: 100, priceId: '' },
   { id: 'pro', name: '专业版', priceMonthlyUsd: 29, tokenCount: 1, quotaPerDay: 1000, priceId: '' },
   { id: 'business', name: '商业版', priceMonthlyUsd: 199, tokenCount: 5, quotaPerDay: 10000, priceId: '' },
 ];
 
+const PLANS_FILE = 'billing-plans.json';
+
+/** 读取套餐：后台配置优先（data/billing-plans.json），缺省回退默认值 */
+export function readPlans(): PlanDef[] {
+  const { items } = readStore<PlanDef>(PLANS_FILE, DEFAULT_PLANS);
+  if (!items.length) return DEFAULT_PLANS;
+  // 校验/兜底：必须包含三档且字段完整
+  const byId = new Map(items.map((p) => [p.id, p]));
+  const merged = DEFAULT_PLANS.map((d) => ({ ...d, ...(byId.get(d.id) || {}) }));
+  return merged;
+}
+
+export function PLANS(): PlanDef[] {
+  return readPlans();
+}
+
 export function planOf(id: string): PlanDef | undefined {
-  return PLANS.find((p) => p.id === id);
+  return readPlans().find((p) => p.id === id);
 }
 
 /** 自然日键（Asia/Shanghai，避免服务器 UTC 跨日错乱） */

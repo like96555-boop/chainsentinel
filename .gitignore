@@ -22,6 +22,8 @@ data/banners.json
 data/site-settings.json
 data/smartmoney.json
 data/ai-config.json
+data/billing-plans.json
+data/usdt-payment.json
 
 # 测试报告（本地产物）
 test-reports/

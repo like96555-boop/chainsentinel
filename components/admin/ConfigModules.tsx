@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { KeyRound, Webhook as WebhookIcon, Megaphone, Settings2, Plus, Trash2, Power, Copy, Check, TestTube2, ScrollText, ShieldAlert } from 'lucide-react';
+import { KeyRound, Webhook as WebhookIcon, Megaphone, Settings2, Plus, Trash2, Power, Copy, Check, TestTube2, ScrollText, ShieldAlert, CreditCard, Save, RefreshCw } from 'lucide-react';
 
-export type ConfigTab = 'apikeys' | 'webhooks' | 'banners' | 'settings' | 'blacklist' | 'audit';
+export type ConfigTab = 'apikeys' | 'webhooks' | 'banners' | 'settings' | 'blacklist' | 'audit' | 'billing';
 
 const inputCls =
   'w-full rounded-lg border border-cyber-700 bg-cyber-950/70 px-3 py-2 text-sm text-slate-200 outline-none focus:border-neon-cyan/60';
@@ -338,12 +338,138 @@ function Settings() {
   );
 }
 
+/* ---------------- 计费与支付 ---------------- */
+function BillingPlans() {
+  const [plans, setPlans] = useState<any[]>([]);
+  const [stripe, setStripe] = useState<any>(null);
+  const [hints, setHints] = useState<{ webhookHint?: string; paymentMethodsHint?: string }>({});
+  const [drafts, setDrafts] = useState<Record<string, { price: string; quota: string; tokens: string; priceId: string }>>({});
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const { json } = await jfetch('/api/admin/billing-plans');
+    if (json?.plans) {
+      setPlans(json.plans);
+      const d: typeof drafts = {};
+      json.plans.forEach((p: any) => {
+        d[p.id] = { price: String(p.priceMonthlyUsd), quota: String(p.quotaPerDay), tokens: String(p.tokenCount), priceId: p.priceId || '' };
+      });
+      setDrafts(d);
+    }
+    if (json?.stripe) setStripe(json.stripe);
+    setHints({ webhookHint: json?.webhookHint, paymentMethodsHint: json?.paymentMethodsHint });
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const save = async (id: string) => {
+    const d = drafts[id];
+    if (!d) return;
+    const body: Record<string, unknown> = { id };
+    if (d.price !== '') body.priceMonthlyUsd = Number(d.price);
+    if (d.quota !== '') body.quotaPerDay = Number(d.quota);
+    if (d.tokens !== '') body.tokenCount = Number(d.tokens);
+    body.priceId = d.priceId.trim();
+    const { res, json } = await jfetch('/api/admin/billing-plans', 'PUT', body);
+    setMsg(res.ok ? `✅ ${id} 套餐已保存` : `❌ ${json?.error || '保存失败'}`);
+    if (res.ok) load();
+  };
+
+  const setDraft = (id: string, k: keyof typeof drafts[string], v: string) => {
+    setDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [k]: v } }));
+  };
+
+  return (
+    <section className={`${sectionCls} mt-6`}>
+      <div className="flex items-center gap-2">
+        <CreditCard size={18} className="text-neon-cyan" />
+        <h2 className="text-lg font-bold">计费与支付</h2>
+        <span className="text-xs text-slate-500">套餐定价 / 配额 / Stripe 收款配置（后台可维护，保存即生效）</span>
+      </div>
+
+      {/* Stripe 状态 */}
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-cyber-700 bg-cyber-950/50 p-4">
+          <div className="text-xs text-slate-400">Stripe 密钥（STRIPE_SECRET_KEY）</div>
+          <div className={`mt-1.5 text-sm font-semibold ${stripe?.secretConfigured ? 'text-neon-green' : 'text-neon-yellow'}`}>
+            {stripe?.secretConfigured ? '✅ 已配置' : '⚠️ 未配置（订阅接口返回 503，不会静默放行）'}
+          </div>
+          <div className="mt-1 text-[11px] text-slate-500">
+            来源：{stripe?.secretSource === 'store' ? '后台加密存储' : stripe?.secretSource === 'env' ? '环境变量 .env' : '无'}
+            {stripe?.secretSource !== 'store' && ' · 可在「运营总览 → 密钥管理」录入（AES-256-GCM 加密落盘）'}
+          </div>
+        </div>
+        <div className="rounded-xl border border-cyber-700 bg-cyber-950/50 p-4">
+          <div className="text-xs text-slate-400">Webhook 密钥（STRIPE_WEBHOOK_SECRET）</div>
+          <div className={`mt-1.5 text-sm font-semibold ${stripe?.webhookConfigured ? 'text-neon-green' : 'text-neon-yellow'}`}>
+            {stripe?.webhookConfigured ? '✅ 已配置' : '⚠️ 未配置（支付成功无法激活令牌）'}
+          </div>
+          <div className="mt-1 text-[11px] text-slate-500">来源：{stripe?.webhookSource === 'store' ? '后台加密存储' : stripe?.webhookSource === 'env' ? '环境变量 .env' : '无'}</div>
+        </div>
+      </div>
+
+      {/* 套餐表 */}
+      <div className="mt-5 overflow-x-auto">
+        <table className="w-full min-w-[640px] text-left text-sm">
+          <thead>
+            <tr className="border-b border-cyber-700 text-xs text-slate-500">
+              <th className="px-3 py-2.5">套餐</th>
+              <th className="px-3 py-2.5">月费 (USD)</th>
+              <th className="px-3 py-2.5">令牌数</th>
+              <th className="px-3 py-2.5">日配额</th>
+              <th className="px-3 py-2.5">Stripe Price ID</th>
+              <th className="px-3 py-2.5"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {plans.map((p) => {
+              const d = drafts[p.id] || { price: '0', quota: '0', tokens: '0', priceId: '' };
+              return (
+                <tr key={p.id} className="border-b border-cyber-800">
+                  <td className="px-3 py-2.5">
+                    <div className="text-slate-200">{p.name}</div>
+                    <div className="text-[11px] text-slate-500">{p.id}{p.id === 'free' && '（免费层无需令牌）'}</div>
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <input value={d.price} onChange={(e) => setDraft(p.id, 'price', e.target.value)} className={`${inputCls} w-20`} inputMode="numeric" />
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <input value={d.tokens} onChange={(e) => setDraft(p.id, 'tokens', e.target.value)} className={`${inputCls} w-16`} inputMode="numeric" />
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <input value={d.quota} onChange={(e) => setDraft(p.id, 'quota', e.target.value)} className={`${inputCls} w-28`} inputMode="numeric" />
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <input value={d.priceId} onChange={(e) => setDraft(p.id, 'priceId', e.target.value)} placeholder="price_xxx（Stripe 产品价格）" className={`${inputCls} w-48 font-mono text-[11px]`} />
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <button className={btnPrimary} onClick={() => save(p.id)}><Save size={12} /> 保存</button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <Notice msg={msg} />
+
+      {/* 提示 */}
+      <div className="mt-5 space-y-2 rounded-xl border border-cyber-800 bg-cyber-950/40 p-4 text-xs leading-relaxed text-slate-500">
+        <p>🔗 {hints.webhookHint || 'Stripe Webhook 端点：/api/billing/webhook（订阅事件：checkout.session.completed / invoice.paid / customer.subscription.deleted）'}</p>
+        <p>💳 {hints.paymentMethodsHint || '支付方式（卡 / Apple Pay / Google Pay / FPS）在 Stripe Dashboard → Settings → Payment methods 勾选，无需改代码'}</p>
+        <p>🧾 修改套餐定价/配额保存后立即生效（前台定价区、订阅中心、计量扣费同步更新）。</p>
+      </div>
+    </section>
+  );
+}
+
 export default function ConfigModules({ tab }: { tab: ConfigTab }) {
   if (tab === 'apikeys') return <div className="mt-6"><ApiKeys /></div>;
   if (tab === 'webhooks') return <div className="mt-6"><Webhooks /></div>;
   if (tab === 'banners') return <div className="mt-6"><Banners /></div>;
   if (tab === 'blacklist') return <div className="mt-6"><Blacklist /></div>;
   if (tab === 'audit') return <div className="mt-6"><AuditLog /></div>;
+  if (tab === 'billing') return <div className="mt-6"><BillingPlans /></div>;
   return <div className="mt-6"><Settings /></div>;
 }
 

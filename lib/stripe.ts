@@ -5,25 +5,36 @@
 // 真实密钥接入：注册 Stripe → 后台密钥管理录入（AES 加密落盘）→ .env 或后台配置均可。
 
 import crypto from 'crypto';
+import { getSecret, secretSource } from './secrets';
 
 const API = 'https://api.stripe.com/v1';
 
 function secretKey(): string {
-  const v = process.env.STRIPE_SECRET_KEY || '';
+  // 优先级：后台加密存储（AES-256-GCM）> 环境变量
+  const v = getSecret('STRIPE_SECRET_KEY');
   if (v && v.startsWith('sk_')) return v;
-  // 兼容后台加密存储（读取 .env 与 secrets 均由调用方注入，此处仅环境变量）
   return v;
 }
 
 export function isStripeConfigured(): boolean {
-  return (process.env.STRIPE_SECRET_KEY || '').startsWith('sk_');
+  return secretKey().startsWith('sk_');
 }
 
 export function isMockMode(): boolean {
   return process.env.STRIPE_MOCK === '1';
 }
 
-/** 创建订阅 Checkout Session，返回跳转 URL（mock 模式返回占位 URL） */
+/** 后台展示：Stripe 密钥配置状态（来源 + 是否就绪） */
+export function stripeConfigStatus(): { secretConfigured: boolean; webhookConfigured: boolean; secretSource: string; webhookSource: string } {
+  return {
+    secretConfigured: secretKey().startsWith('sk_'),
+    webhookConfigured: (getSecret('STRIPE_WEBHOOK_SECRET') || '').startsWith('whsec_'),
+    secretSource: secretSource('STRIPE_SECRET_KEY'),
+    webhookSource: secretSource('STRIPE_WEBHOOK_SECRET'),
+  };
+}
+
+/** 创建订阅 Checkout Session，返回跳转 URL（仅显式 STRIPE_MOCK=1 时走本地占位） */
 export async function createCheckoutSession(opts: {
   priceId: string;
   customerEmail: string;
@@ -31,11 +42,15 @@ export async function createCheckoutSession(opts: {
   successUrl: string;
   cancelUrl: string;
 }): Promise<{ url: string; sessionId: string }> {
-  if (isMockMode() || !secretKey()) {
+  if (isMockMode()) {
     return {
       url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/billing/mock-checkout?order=${opts.clientReferenceId}`,
       sessionId: 'cs_mock_' + opts.clientReferenceId,
     };
+  }
+  if (!secretKey()) {
+    // 生产模式必须配置真实 Stripe 密钥：宁可明确报错，绝不静默放行（否则客户不扣款白得令牌）
+    throw new Error('收款通道未配置：缺少 STRIPE_SECRET_KEY（sk_live_*）。请在服务器 .env 配置后重启服务。');
   }
   const body = new URLSearchParams({
     mode: 'subscription',
@@ -99,7 +114,7 @@ export type StripeEvent = {
 
 /** 解析并校验 Webhook 原始请求体 */
 export function parseWebhook(rawBody: string, signatureHeader: string): { event: StripeEvent } | { error: string } {
-  const secret = process.env.STRIPE_WEBHOOK_SECRET || '';
+  const secret = getSecret('STRIPE_WEBHOOK_SECRET');
   if (!isMockMode() && (!secret || !signatureHeader)) {
     return { error: '缺少 Stripe Webhook 签名头或密钥' };
   }
@@ -120,6 +135,15 @@ export interface OrderRecord {
   customerEmail: string;
   amountUsd: number;
   status: 'pending' | 'paid' | 'canceled';
+  /** 支付方式：stripe（卡/钱包）/ usdt（TRON 链上 USDT，非托管） */
+  method?: 'stripe' | 'usdt';
+  /** USDT 支付：应到金额（USDT 数量，1 USDT ≈ 1 USD） */
+  amountUsdt?: number;
+  /** USDT 支付：链上交易哈希（确认到账后记录） */
+  usdtTxId?: string;
+  confirmedAt?: number;
+  /** 激活后生成的令牌（明文仅此时可查，后台可复核） */
+  tokens?: Array<{ id: string; key: string; name: string }>;
   stripeSessionId?: string;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;

@@ -2,6 +2,8 @@
 import { readStore, writeStore, newId } from './config-store';
 import type { OrderRecord } from './stripe';
 
+export type { OrderRecord } from './stripe';
+
 export function readOrders(): OrderRecord[] {
   return readStore<OrderRecord>('orders.json', []).items;
 }

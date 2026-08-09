@@ -43,7 +43,7 @@ sudo systemctl reload caddy
 
 ### 5. Stripe 生产接入（收款上线）
 
-1. Stripe Dashboard 创建产品/价格，复制 Price ID → 填入 `lib/billing.ts` 的 `PLANS`（`priceId` 字段）。
+1. Stripe Dashboard 创建产品/价格，复制 Price ID → **后台「计费与支付」模块录入**（套餐定价/配额/Price ID 均后台可维护，保存即生效，无需改代码）。
 2. Stripe Webhooks 添加端点：`https://你的主域名/api/billing/webhook`，订阅事件：
    `checkout.session.completed` / `invoice.paid` / `customer.subscription.deleted`。
 3. 把 `sk_live_*` 与 `whsec_*` 填入服务器 `.env`（`STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`）。

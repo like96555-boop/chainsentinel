@@ -31,6 +31,8 @@ export const secretsPutSchema = z
     KIMI_API_KEY: z.string().max(256).optional(),
     KIMI_BASE_URL: z.string().max(256).optional(),
     TRONGRID_API_KEY: z.string().max(256).optional(),
+    STRIPE_SECRET_KEY: z.string().max(256).optional(),
+    STRIPE_WEBHOOK_SECRET: z.string().max(256).optional(),
   })
   .refine((o) => Object.values(o).some((v) => typeof v === 'string'), {
     message: '至少提供一个密钥字段',
