@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import ChatWidget from '@/components/ChatWidget';
+import LoginButton from '@/components/LoginButton';
 import { AnnouncementBar } from '@/components/BannerCarousel';
 
 export const metadata: Metadata = {
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   {l.label}
                 </a>
               ))}
+              <LoginButton />
             </div>
           </nav>
         </header>
