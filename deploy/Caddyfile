@@ -1,9 +1,9 @@
 # 链哨 ChainSentinel · Caddy 反向代理配置（自动 HTTPS）
-# 使用：把下面的 你的主域名 / ai.你的主域名 替换为真实域名，然后
-#   sudo cp Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
-# 注意：域名需先解析 A 记录到本服务器 IP（80/443 放行）
+# 主域 chainsentinel.hk → 主站(3000)；ai.chainsentinel.hk → AI 管理台(3001)
+# 使用：sudo cp Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
+# 前置：DNS 已解析（见 deploy/README.md 第 4 步）
 
-你的主域名 {
+chainsentinel.hk, www.chainsentinel.hk {
 	encode gzip
 	reverse_proxy 127.0.0.1:3000
 
@@ -17,7 +17,7 @@
 	# rate_limit { zone dynamic { window 1m { events 120 } } }
 }
 
-ai.你的主域名 {
+ai.chainsentinel.hk {
 	encode gzip
 	reverse_proxy 127.0.0.1:3001
 

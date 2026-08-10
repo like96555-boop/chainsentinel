@@ -16,7 +16,7 @@ AI_ADMIN_PASSWORD=${rand(12)}
 # Stripe 密钥（生产模式必填；测试阶段可先用 sk_test_*）
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
-NEXT_PUBLIC_BASE_URL=https://你的主域名
+NEXT_PUBLIC_BASE_URL=https://chainsentinel.hk
 
 # TRONSCAN 情报源（可选，免费注册：tronscan.org → API）
 TRONSCAN_API_KEY=

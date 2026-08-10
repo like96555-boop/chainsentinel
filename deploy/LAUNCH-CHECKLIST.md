@@ -23,8 +23,8 @@
 | # | 事项 | 缺失后果 | 操作 | 状态 |
 |---|---|---|---|---|
 | 8 | 阿里云香港 ECS（Ubuntu 24.04，2C4G） | 无法上线 | 控制台开通，给 Hermes IP+SSH | ☐ |
-| 9 | 域名注册 + 实名认证（如 chainsentinel.com） | 无品牌域名；Stripe 生产审核通常要求网站 | 阿里云域名注册 | ☐ |
-| 10 | 域名解析 A 记录 → ECS IP | 域名打不开 | 云解析 DNS | ☐ |
+| 9 | 域名注册 + 实名认证（chainsentinel.hk ✅ 已购） | 无品牌域名；Stripe 生产审核通常要求网站 | 阿里云域名注册（已完成） | ☑ |
+| 10 | 域名解析 A 记录 → ECS IP（@/www/ai 三条） | 域名打不开 | 阿里云云解析 | ☐ |
 | 11 | Caddy HTTPS 配置（主域 → 3000，ai.子域 → 3001） | 无 HTTPS，浏览器告警，支付页不信任 | deploy/Caddyfile（Hermes 执行） | ☐ |
 | 12 | 部署双应用 + 健康检查通过 | 无法访问 | deploy/deploy-server.sh（Hermes 执行） | ☐ |
 | 13 | `.env` 强密码（MASTER_KEY/ADMIN_PASSWORD/AI_ADMIN_PASSWORD） | 弱密码被爆破，密钥泄露 | deploy/gen-strong-env.mjs 生成 | ☐ |

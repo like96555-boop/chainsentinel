@@ -1,6 +1,7 @@
 # 链哨 ChainSentinel · 阿里云香港 ECS 部署指南（上线通道）
 
 目标环境：Ubuntu 24.04 · 2C4G（起步）· Node.js 24 LTS · PM2 双进程 · Caddy 自动 HTTPS
+域名：`chainsentinel.hk`（主站）+ `ai.chainsentinel.hk`（AI 管理台）
 
 ## 服务器侧执行顺序（全程约 10 分钟）
 
@@ -31,15 +32,18 @@ sudo bash deploy/deploy-server.sh       # 构建双应用 + PM2 启动 + 健康�
 ### 4. 配置 Caddy 域名与 HTTPS
 
 ```bash
-# 域名解析：A 记录 → 服务器公网 IP（80/443 放行）
+# 域名解析（阿里云云解析，指向服务器公网 IP）：
+#   A 记录  chainsentinel.hk    → 服务器公网 IP
+#   A 记录  www.chainsentinel.hk → 服务器公网 IP
+#   A 记录  ai.chainsentinel.hk  → 服务器公网 IP
 sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
-sudo nano /etc/caddy/Caddyfile          # 替换两个占位域名
 sudo systemctl reload caddy
 ```
 
 完成后：
-- `https://你的主域名` → 主站（端口 3000）
-- `https://ai.你的主域名` → AI 管理台（端口 3001）
+- `https://chainsentinel.hk` → 主站（端口 3000）
+- `https://ai.chainsentinel.hk` → AI 管理台（端口 3001）
+- 服务器 `.env` 中 `NEXT_PUBLIC_BASE_URL=https://chainsentinel.hk`
 
 ### 5. Stripe 生产接入（收款上线）
 
