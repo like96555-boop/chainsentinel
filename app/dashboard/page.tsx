@@ -110,6 +110,7 @@ export default function DashboardPage() {
       setAuthPw('');
       setAuthMsg('');
       refreshMy(j.email);
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('cs-auth-changed'));
       if (authMode === 'register') setAuthMode('login');
     } catch (e) {
       setAuthMsg(e instanceof Error ? e.message : '操作失败');
@@ -121,6 +122,7 @@ export default function DashboardPage() {
     setAuth(null);
     setMyData(null);
     setEmail('');
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('cs-auth-changed'));
   };
 
   useEffect(() => { loadMe(); }, [loadMe]);
@@ -238,6 +240,24 @@ export default function DashboardPage() {
         </p>
       </motion.div>
 
+      {/* 登录横幅（未登录第一屏可见） */}
+      {!auth && (
+        <div className="mt-8 flex flex-col items-start justify-between gap-3 rounded-2xl border border-[#7170ff]/50 bg-gradient-to-r from-[#7170ff]/15 to-[#9d8cff]/10 p-5 sm:flex-row sm:items-center">
+          <div>
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-100">
+              <ShieldCheck size={16} className="text-[#9d8cff]" /> 登录 / 注册你的账号
+            </div>
+            <p className="mt-1 text-xs text-slate-400">登录后订阅，付款权益（API 令牌、用量、到期时间）全部绑定到你的账号；还可添加自己的监控钱包。</p>
+          </div>
+          <a
+            href="#subscribe"
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-[#7170ff] to-[#9d8cff] px-6 text-sm font-semibold text-white transition hover:brightness-110"
+          >
+            去登录 →
+          </a>
+        </div>
+      )}
+
       {/* 套餐卡片 */}
       <section className="mt-10">
         <h2 className="mb-4 text-sm font-semibold text-slate-300">选择套餐</h2>
@@ -284,7 +304,7 @@ export default function DashboardPage() {
         </div>
 
         {/* 订阅操作 */}
-        <div className="mt-6 rounded-2xl border border-cyber-700 bg-cyber-900/60 p-5">
+        <div id="subscribe" className="mt-6 rounded-2xl border border-cyber-700 bg-cyber-900/60 p-5">
           <div className="mb-4">
             <label className="mb-2 block text-xs text-slate-400">支付方式</label>
             <div className="flex gap-2">
