@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { KeyRound, Webhook as WebhookIcon, Megaphone, Settings2, Plus, Trash2, Power, Copy, Check, TestTube2, ScrollText, ShieldAlert, CreditCard, Save, RefreshCw } from 'lucide-react';
+import { KeyRound, Webhook as WebhookIcon, Megaphone, Settings2, Plus, Trash2, Power, Copy, Check, TestTube2, ScrollText, ShieldAlert, CreditCard, Save, RefreshCw, Search } from 'lucide-react';
 
-export type ConfigTab = 'apikeys' | 'webhooks' | 'banners' | 'settings' | 'blacklist' | 'audit' | 'billing';
+export type ConfigTab = 'apikeys' | 'webhooks' | 'banners' | 'settings' | 'blacklist' | 'audit' | 'billing' | 'customers';
 
 const inputCls =
   'w-full rounded-lg border border-cyber-700 bg-cyber-950/70 px-3 py-2 text-sm text-slate-200 outline-none focus:border-neon-cyan/60';
@@ -486,6 +486,93 @@ function BillingPlans() {
   );
 }
 
+/* ---------------- 客户管理 ---------------- */
+function Customers() {
+  const [items, setItems] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>(null);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async (kw = '') => {
+    setLoading(true);
+    try {
+      const { json } = await jfetch('/api/admin/customers' + (kw ? `?search=${encodeURIComponent(kw)}` : ''));
+      if (json?.items) setItems(json.items);
+      if (json?.summary) setSummary(json.summary);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const fmt = (ts?: number | null) => (ts ? new Date(ts).toLocaleString('zh-CN', { hour12: false }) : '—');
+
+  return (
+    <div className="mt-6 space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <input value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load(search)} placeholder="按邮箱搜索客户…" className={`${inputCls} w-64`} />
+        <button className={btnPrimary} onClick={() => load(search)}><Search size={13} /> 搜索</button>
+        {summary && (
+          <div className="ml-auto flex gap-4 text-xs text-slate-400">
+            <span>客户总数 <b className="text-slate-200">{summary.customerCount}</b></span>
+            <span>付费客户 <b className="text-emerald-300">{summary.paidCustomers}</b></span>
+            <span>累计收入 <b className="text-emerald-300">${summary.totalRevenueUsd}</b></span>
+          </div>
+        )}
+      </div>
+      <div className="overflow-x-auto rounded-2xl border border-cyber-700 bg-cyber-900/40">
+        <table className="w-full text-left text-xs">
+          <thead>
+            <tr className="border-b border-cyber-700 text-slate-500">
+              <th className="px-3 py-2.5">客户邮箱</th>
+              <th className="px-3 py-2.5">注册时间</th>
+              <th className="px-3 py-2.5">最近登录</th>
+              <th className="px-3 py-2.5">订单</th>
+              <th className="px-3 py-2.5">已付/收入</th>
+              <th className="px-3 py-2.5">当前订阅</th>
+              <th className="px-3 py-2.5">最近订单</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={7} className="px-3 py-8 text-center text-slate-600">加载中…</td></tr>
+            ) : items.length === 0 ? (
+              <tr><td colSpan={7} className="px-3 py-8 text-center text-slate-600">暂无客户</td></tr>
+            ) : (
+              items.map((c) => (
+                <tr key={c.email} className="border-b border-cyber-800/60">
+                  <td className="px-3 py-2.5 font-mono text-slate-200">{c.email}</td>
+                  <td className="px-3 py-2.5 text-slate-400">{fmt(c.createdAt)}</td>
+                  <td className="px-3 py-2.5 text-slate-500">{fmt(c.lastLoginAt)}</td>
+                  <td className="px-3 py-2.5 text-slate-400">{c.orderCount} 单</td>
+                  <td className="px-3 py-2.5">
+                    <span className="text-slate-300">{c.paidCount} 单</span>
+                    <span className="ml-2 text-emerald-300">${c.revenueUsd}</span>
+                  </td>
+                  <td className="px-3 py-2.5">
+                    {c.subscription ? (
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${c.subscription.status === 'active' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-300'}`}>
+                        {c.subscription.plan} · {c.subscription.status}
+                      </span>
+                    ) : (
+                      <span className="text-slate-600">无</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 text-slate-500">
+                    {c.recentOrder ? `${c.recentOrder.id} · ${c.recentOrder.status} · $${c.recentOrder.amountUsd || 0}` : '—'}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-[11px] text-slate-600">客户通过订阅中心注册/登录（邮箱+密码，scrypt 加密存储）；订阅与令牌自动归属客户账号。</p>
+    </div>
+  );
+}
+
 export default function ConfigModules({ tab }: { tab: ConfigTab }) {
   if (tab === 'apikeys') return <div className="mt-6"><ApiKeys /></div>;
   if (tab === 'webhooks') return <div className="mt-6"><Webhooks /></div>;
@@ -493,6 +580,7 @@ export default function ConfigModules({ tab }: { tab: ConfigTab }) {
   if (tab === 'blacklist') return <div className="mt-6"><Blacklist /></div>;
   if (tab === 'audit') return <div className="mt-6"><AuditLog /></div>;
   if (tab === 'billing') return <div className="mt-6"><BillingPlans /></div>;
+  if (tab === 'customers') return <div className="mt-6"><Customers /></div>;
   return <div className="mt-6"><Settings /></div>;
 }
 

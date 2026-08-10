@@ -16,6 +16,8 @@ import {
   Inbox,
   AlertTriangle,
   Activity,
+  Radar,
+  Trash2,
 } from 'lucide-react';
 import KlineSection from '@/components/KlineSection';
 import { BannerCarousel } from '@/components/BannerCarousel';
@@ -99,6 +101,42 @@ export default function SmartMoneyPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState<Record<string, EventsResponse | 'loading' | 'error'>>({});
+  // 我的监控（登录客户专属）
+  const [auth, setAuth] = useState<{ email: string } | null>(null);
+  const [watches, setWatches] = useState<Array<{ address: string; chain: string; name: string; createdAt: number }>>([]);
+  const [watchAddr, setWatchAddr] = useState('');
+  const [watchName, setWatchName] = useState('');
+  const [watchMsg, setWatchMsg] = useState('');
+
+  const loadWatches = useCallback(async () => {
+    const me = await fetch('/api/auth/me');
+    if (me.ok) {
+      const mj = await me.json();
+      setAuth({ email: mj.email });
+      const r = await fetch('/api/watches');
+      if (r.ok) {
+        const j = await r.json();
+        setWatches(j.items || []);
+      }
+    }
+  }, []);
+
+  const addWatch = async () => {
+    setWatchMsg('');
+    if (!watchAddr.trim()) { setWatchMsg('请输入要监控的地址'); return; }
+    const r = await fetch('/api/watches', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ address: watchAddr.trim(), name: watchName.trim() }) });
+    const j = await r.json();
+    if (!r.ok) { setWatchMsg(j.error || '添加失败'); return; }
+    setWatches((prev) => [...prev, j.item]);
+    setWatchAddr('');
+    setWatchName('');
+    setWatchMsg('✅ 已加入你的监控列表');
+  };
+
+  const removeWatch = async (addr: string) => {
+    await fetch(`/api/watches?address=${encodeURIComponent(addr)}`, { method: 'DELETE' });
+    setWatches((prev) => prev.filter((w) => w.address !== addr));
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -122,7 +160,8 @@ export default function SmartMoneyPage() {
 
   useEffect(() => {
     load();
-  }, [load]);
+    loadWatches();
+  }, [load, loadWatches]);
 
   async function toggleCard(card: CardItem) {
     // 点击 100ms 内反馈：先展开 loading 态；已展开则收起
@@ -206,6 +245,60 @@ export default function SmartMoneyPage() {
           <p className="text-sm text-slate-400">暂无监控中的聪明钱地址</p>
         </div>
       )}
+
+      {/* 我的监控（登录客户专属） */}
+      <div className="mt-8 rounded-2xl border border-[#7170ff]/30 bg-cyber-900/50 p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-100">
+            <Radar size={15} className="text-[#9d8cff]" /> 我的监控钱包
+            <span className="text-[11px] font-normal text-slate-500">（登录后可添加你独有的跟踪地址）</span>
+          </h2>
+          {auth && <span className="text-[11px] text-slate-500">{auth.email} · {watches.length}/20</span>}
+        </div>
+        {!auth ? (
+          <p className="text-xs text-slate-500">
+            登录后即可添加自己的监控地址（ETH / BTC / TRON），实时跟踪余额与动态。
+            <a href="/dashboard" className="ml-1 text-[#9d8cff] transition hover:brightness-125">去登录 →</a>
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                value={watchAddr}
+                onChange={(e) => setWatchAddr(e.target.value)}
+                placeholder="输入地址：0x… / 1… / T…"
+                className="flex-1 rounded-xl border border-cyber-700 bg-cyber-950/60 px-3 py-2 text-sm text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-[#7170ff]/60"
+              />
+              <input
+                value={watchName}
+                onChange={(e) => setWatchName(e.target.value)}
+                placeholder="备注（可选）"
+                className="w-full rounded-xl border border-cyber-700 bg-cyber-950/60 px-3 py-2 text-sm text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-[#7170ff]/60 sm:w-44"
+              />
+              <button onClick={addWatch} className="rounded-xl bg-gradient-to-r from-[#7170ff] to-[#9d8cff] px-5 py-2 text-sm font-semibold text-white transition hover:brightness-110">
+                + 添加监控
+              </button>
+            </div>
+            {watchMsg && <p className="text-xs text-slate-400">{watchMsg}</p>}
+            {watches.length === 0 ? (
+              <p className="text-xs text-slate-600">还没有监控地址，添加第一个吧。</p>
+            ) : (
+              <ul className="space-y-2">
+                {watches.map((w) => (
+                  <li key={w.address} className="flex items-center gap-3 rounded-xl border border-cyber-700 bg-cyber-950/40 px-3 py-2">
+                    <span className="rounded-md bg-cyber-800 px-1.5 py-0.5 text-[10px] font-semibold text-[#9d8cff]">{w.chain.toUpperCase()}</span>
+                    <code className="flex-1 truncate font-mono text-xs text-slate-300">{w.address}</code>
+                    <span className="max-w-36 truncate text-[11px] text-slate-500">{w.name}</span>
+                    <button onClick={() => removeWatch(w.address)} className="text-slate-600 transition hover:text-red-400" title="删除">
+                      <Trash2 size={14} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* 地址卡网格 */}
       {!loading && !error && cards && cards.length > 0 && (

@@ -22,6 +22,8 @@ export interface ApiKeyEntry {
   usageByDay?: Record<string, number>;
   /** 套餐名（free / pro / business） */
   plan?: string;
+  /** 订阅客户邮箱（客户账号体系关联） */
+  customerEmail?: string;
   /** 订阅周期结束时间戳（续费后顺延） */
   periodEndsAt?: number;
   stripeCustomerId?: string;
@@ -267,6 +269,7 @@ export function activateSubscription(opts: {
       lastUsedAt: 0,
       usageByDay: {},
       plan: plan.id,
+      customerEmail: opts.customerEmail,
       periodEndsAt: opts.periodEndsAt,
       stripeCustomerId: opts.stripeCustomerId,
       stripeSubscriptionId: opts.stripeSubscriptionId,

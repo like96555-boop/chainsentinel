@@ -24,6 +24,9 @@ data/smartmoney.json
 data/ai-config.json
 data/billing-plans.json
 data/usdt-payment.json
+data/customers.json
+data/customer-sessions.json
+data/customer-watches.json
 
 # 测试报告（本地产物）
 test-reports/

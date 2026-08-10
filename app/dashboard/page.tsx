@@ -64,6 +64,67 @@ export default function DashboardPage() {
   const [usageLoading, setUsageLoading] = useState(false);
   const [usageError, setUsageError] = useState('');
 
+  // ── 客户账号（登录/注册/我的订阅）──
+  const [auth, setAuth] = useState<{ email: string } | null>(null);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPw, setAuthPw] = useState('');
+  const [authMsg, setAuthMsg] = useState('');
+  const [myData, setMyData] = useState<{ orders: any[]; keys: any[] } | null>(null);
+  const [myLoading, setMyLoading] = useState(false);
+
+  const loadMe = useCallback(async () => {
+    const r = await fetch('/api/auth/me');
+    if (r.ok) {
+      const j = await r.json();
+      setAuth({ email: j.email });
+      setEmail(j.email);
+      refreshMy(j.email);
+    }
+  }, []);
+
+  const refreshMy = async (em?: string) => {
+    setMyLoading(true);
+    try {
+      const r = await fetch('/api/billing/my');
+      if (r.ok) {
+        const j = await r.json();
+        setMyData({ orders: j.orders || [], keys: j.keys || [] });
+        if (em) setEmail(em);
+      }
+    } finally {
+      setMyLoading(false);
+    }
+  };
+
+  const doAuth = async () => {
+    setAuthMsg('');
+    if (!authEmail || !authPw) { setAuthMsg('请填写邮箱和密码'); return; }
+    const path = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
+    try {
+      const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: authEmail, password: authPw }) });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || (authMode === 'login' ? '登录失败' : '注册失败'));
+      setAuth({ email: j.email });
+      setEmail(j.email);
+      setAuthPw('');
+      setAuthMsg('');
+      refreshMy(j.email);
+      if (authMode === 'register') setAuthMode('login');
+    } catch (e) {
+      setAuthMsg(e instanceof Error ? e.message : '操作失败');
+    }
+  };
+
+  const doLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    setAuth(null);
+    setMyData(null);
+    setEmail('');
+  };
+
+  useEffect(() => { loadMe(); }, [loadMe]);
+
   useEffect(() => {
     fetch('/api/billing/plans')
       .then((r) => r.json())
@@ -77,10 +138,16 @@ export default function DashboardPage() {
     setSubResult(null);
     setUsdtOrder(null);
     try {
+      // 订阅归属：必须登录（付费权益要落进账号）；邮箱以账号为准
+      if (!auth) {
+        setSubError('请先登录后再订阅，权益将绑定到你的账号');
+        setSubmitting(false);
+        return;
+      }
       const r = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: selected, email, paymentMethod: method }),
+        body: JSON.stringify({ plan: selected, email: auth.email, paymentMethod: method }),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || '创建订阅失败');
@@ -240,25 +307,73 @@ export default function DashboardPage() {
               </p>
             )}
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="flex-1">
-              <label className="mb-1.5 block text-xs text-slate-400">订阅邮箱（接收账单与令牌）</label>
-              <input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
-                className="w-full rounded-xl border border-cyber-700 bg-cyber-950/60 px-4 py-2.5 text-sm text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-[#7170ff]/60"
-              />
+          {!auth ? (
+            <div className="rounded-2xl border border-[#7170ff]/40 bg-[#7170ff]/5 p-5">
+              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-100">
+                <ShieldCheck size={16} className="text-[#9d8cff]" /> 登录后订阅，权益绑定到你的账号
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <div className="flex-1">
+                  <label className="mb-1.5 block text-xs text-slate-400">邮箱</label>
+                  <input
+                    value={authEmail}
+                    onChange={(e) => setAuthEmail(e.target.value)}
+                    placeholder="you@company.com"
+                    className="w-full rounded-xl border border-cyber-700 bg-cyber-950/60 px-4 py-2.5 text-sm text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-[#7170ff]/60"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="mb-1.5 block text-xs text-slate-400">密码</label>
+                  <input
+                    type="password"
+                    value={authPw}
+                    onChange={(e) => setAuthPw(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && doAuth()}
+                    placeholder={authMode === 'login' ? '输入密码' : '至少 8 位'}
+                    className="w-full rounded-xl border border-cyber-700 bg-cyber-950/60 px-4 py-2.5 text-sm text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-[#7170ff]/60"
+                  />
+                </div>
+                <button
+                  onClick={doAuth}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#7170ff] to-[#9d8cff] px-6 text-sm font-semibold text-white transition hover:brightness-110"
+                >
+                  {authMode === 'login' ? '登 录' : '注 册'}
+                </button>
+              </div>
+              <div className="mt-3 flex items-center gap-4 text-xs">
+                <button
+                  onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthMsg(''); }}
+                  className="text-[#9d8cff] transition hover:brightness-125"
+                >
+                  {authMode === 'login' ? '没有账号？立即注册' : '已有账号？去登录'}
+                </button>
+                {authMsg && <span className={authMsg.includes('成功') ? 'text-emerald-400' : 'text-red-400'}>{authMsg}</span>}
+              </div>
+              <p className="mt-3 text-[11px] text-slate-500">
+                注册即登录：付款后登录同一账号即可查看「我的订阅」与 API 令牌。钱包登录即将支持。
+              </p>
             </div>
-            <button
-              onClick={subscribe}
-              disabled={submitting || !email || selected === 'free'}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#7170ff] to-[#9d8cff] px-6 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {submitting ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />}
-              {submitting ? '创建中…' : '立即订阅'}
-            </button>
-          </div>
+          ) : (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="flex-1">
+                <div className="mb-1.5 flex items-center gap-2 text-xs text-slate-400">
+                  订阅归属账号 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-300"><CircleCheck size={11} /> {auth.email}</span>
+                </div>
+                <div className="rounded-xl border border-cyber-700 bg-cyber-950/60 px-4 py-2.5 text-sm text-slate-300">
+                  {selected === 'free' ? '免费版无需订阅，直接使用即可' : `即将订阅：${plans.find((p) => p.id === selected)?.name || selected}（权益计入 ${auth.email}）`}
+                </div>
+              </div>
+              <button
+                onClick={subscribe}
+                disabled={submitting || selected === 'free'}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#7170ff] to-[#9d8cff] px-6 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {submitting ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />}
+                {submitting ? '创建中…' : '立即订阅'}
+              </button>
+              <button onClick={doLogout} className="text-xs text-slate-500 transition hover:text-slate-300">退出登录</button>
+            </div>
+          )}
         </div>
         {subError && <p className="mt-3 text-sm text-red-400">{subError}</p>}
 

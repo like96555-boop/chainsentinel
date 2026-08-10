@@ -60,7 +60,7 @@ export default function AdminPage() {
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<Status | null>(null);
   const [notice, setNotice] = useState('');
-  const [tab, setTab] = useState<'overview' | 'apikeys' | 'webhooks' | 'banners' | 'settings' | 'blacklist' | 'audit' | 'billing'>('overview');
+  const [tab, setTab] = useState<'overview' | 'apikeys' | 'webhooks' | 'banners' | 'settings' | 'blacklist' | 'audit' | 'billing' | 'customers'>('overview');
 
   // 聪明钱监控
   const [smItems, setSmItems] = useState<SmItem[]>([]);
@@ -296,8 +296,9 @@ export default function AdminPage() {
             ['webhooks', 'Webhook'],
             ['banners', '营销横幅'],
             ['blacklist', '黑名单库'],
-            ['settings', '站点设置'],
+            ['customers', '客户管理'],
             ['billing', '计费与支付'],
+            ['settings', '站点设置'],
             ['audit', '操作日志'],
           ] as const
         ).map(([k, label]) => (
