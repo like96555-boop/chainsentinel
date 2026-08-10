@@ -1,6 +1,6 @@
 // 链哨 · 服务器强密码生成器
 // 用法：node gen-strong-env.mjs  →  打印可直接粘贴进 .env 的强凭据（不写盘，安全）
-const crypto = require('crypto');
+import crypto from 'crypto';
 const rand = (n) => crypto.randomBytes(n).toString('hex');
 
 const out = `# 由 gen-strong-env.mjs 生成（${new Date().toISOString()}）—— 请粘贴进服务器 .env
