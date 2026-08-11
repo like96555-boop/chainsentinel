@@ -63,15 +63,14 @@ export async function POST(req: Request) {
   // 2) 黑名单命中 = 红色短路（按链匹配或 any）
   const hit = findInBlacklist(address, chain);
   if (hit) {
+    const reasons = [`命中本地风险标签库：${hit.label}`];
+    if (hit.note) reasons.push(`标签备注：${hit.note}`);
+    reasons.push('建议立即停止与该地址的一切资金往来。');
     return NextResponse.json({
       chain,
       level: 'red',
       score: 5,
-      reasons: [
-        `命中本地风险标签库：${hit.label}`,
-        `标签备注：${hit.note}`,
-        '建议立即停止与该地址的一切资金往来。',
-      ],
+      reasons,
       evidenceLinks: [explorerAddressUrl(chain, address)],
       blacklist: { label: hit.label, source: hit.source, sourceLabel: sourceLabelOf(hit.source) },
       stats: null,
