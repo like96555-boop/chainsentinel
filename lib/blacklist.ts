@@ -8,6 +8,8 @@ export interface BlacklistEntry {
   address: string;
   label: string;
   note: string;
+  /** 兼容后台导入的 OFAC 条目（字段名为 notes） */
+  notes?: string;
   source: string;
   /** 缺省视为 any（向后兼容旧数据） */
   chain?: BlacklistChain;
@@ -20,9 +22,11 @@ export function readBlacklist(): BlacklistEntry[] {
     if (fs.existsSync(FILE)) {
       const raw = JSON.parse(fs.readFileSync(FILE, 'utf8')) as unknown;
       // 兼容两种格式：纯数组（旧）与 {items:[...]}（后台管理模块写入）
-      if (Array.isArray(raw)) return raw as BlacklistEntry[];
+      const normalize = (list: BlacklistEntry[]) =>
+        list.map((e) => ({ ...e, note: e.note ?? e.notes ?? '' }));
+      if (Array.isArray(raw)) return normalize(raw as BlacklistEntry[]);
       if (raw && typeof raw === 'object' && Array.isArray((raw as { items?: unknown }).items)) {
-        return (raw as { items: BlacklistEntry[] }).items;
+        return normalize((raw as { items: BlacklistEntry[] }).items);
       }
     }
   } catch (e) {
