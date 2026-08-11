@@ -69,6 +69,13 @@ export async function POST(req: Request) {
     );
   }
 
+  const sys = buildSystemMessage(cfg);
+  // Kimi coding 端点拒绝空的 system 消息（HTTP 400）——为空时只发 user 消息
+  const messages: Array<{ role: string; content: string }> = [
+    { role: 'user', content: parsed.data.message },
+  ];
+  if (sys.trim()) messages.unshift({ role: 'system', content: sys });
+
   let upstream: Response;
   try {
     upstream = await fetch(`${baseUrl}/chat/completions`, {
@@ -83,10 +90,7 @@ export async function POST(req: Request) {
         model: cfg.model || 'kimi-for-coding',
         stream: true,
         // 注：Kimi coding 端点不接受 temperature 参数（会 400），配置值仅存管理台备用
-        messages: [
-          { role: 'system', content: buildSystemMessage(cfg) },
-          { role: 'user', content: parsed.data.message },
-        ],
+        messages,
       }),
     });
   } catch (e) {
