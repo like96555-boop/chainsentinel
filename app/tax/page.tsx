@@ -68,8 +68,13 @@ export default function TaxPage() {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = '链哨税表审计底稿.csv';
+    a.style.display = 'none';
+    document.body.appendChild(a); // 必须挂载到 DOM，否则部分浏览器不触发下载
     a.click();
-    URL.revokeObjectURL(a.href);
+    setTimeout(() => {
+      URL.revokeObjectURL(a.href);
+      a.remove();
+    }, 1000);
   }
 
   const totalAudit = results?.reduce((s, r) => s + (r.auditFlagCount || 0), 0) || 0;
