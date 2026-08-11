@@ -318,12 +318,12 @@ export default function DashboardPage() {
                 onClick={() => setMethod('usdt')}
                 className={`flex-1 rounded-xl border px-4 py-2.5 text-sm transition sm:flex-none ${method === 'usdt' ? 'border-[#7170ff]/70 bg-[#7170ff]/10 text-slate-100' : 'border-cyber-700 text-slate-400 hover:border-cyber-600'}`}
               >
-                🟢 USDT（TRC-20 非托管）
+                🟢 USDT 加密支付（TRC-20 · 到账即开通）
               </button>
             </div>
             {method === 'usdt' && (
               <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
-                直接向运营方 TRON 钱包打款 USDT（TRC-20），链上到账后自动激活。非托管：资金直达运营方钱包，平台不托管、零手续费。
+                直接向运营方 TRON 钱包打款 USDT（TRC-20）：无需银行卡、无需审核、零手续费，链上到账后自动激活订阅。非托管——资金直达运营方钱包，平台不托管。
               </p>
             )}
           </div>
