@@ -141,7 +141,7 @@ interface PricingItem {
 
 const PRICING_FALLBACK: PricingItem[] = [
   { id: 'free', name: '社区版', price: '$0', unit: '', highlight: false, cta: '立即使用', items: ['每日 100 次地址查询', '基础黑名单匹配', '网页端红绿灯报告'] },
-  { id: 'pro', name: '专业版', price: '$29', unit: '/月', highlight: true, cta: '升级专业版', items: ['1 个 API 令牌 · 1000 次/日', 'Webhook 实时告警', '聪明钱追踪 🔒', '税务中心 Pro 🔒', 'Stripe / USDT 双支付'] },
+  { id: 'pro', name: '专业版', price: '$29', unit: '/月', highlight: true, cta: '升级专业版', items: ['1 个 API 令牌 · 1000 次/日', 'Webhook 实时告警', '聪明钱追踪 🔒', '税务中心 Pro 🔒', '🟢 USDT 加密支付 · 到账即开通'] },
   { id: 'business', name: '商业版', price: '$199', unit: '/月', highlight: false, cta: '联系销售', items: ['5 个 API 令牌 · 10000 次/日', '全部 Pro 功能', '优先支持', '定制风险标签库'] },
 ];
 
@@ -156,7 +156,7 @@ export default function LandingPage() {
         if (!Array.isArray(j?.plans)) return;
         const map: Record<string, { name: string; price?: string; unit?: string; cta: string; highlight: boolean; items: string[]; original?: string; promoting?: boolean }> = {
           free: { name: '社区版', cta: '立即使用', highlight: false, items: ['每日 100 次地址查询', '基础黑名单匹配', '网页端红绿灯报告'] },
-          pro: { name: '专业版', cta: '升级专业版', highlight: true, items: ['1 个 API 令牌 · 1000 次/日', 'Webhook 实时告警', '聪明钱追踪 🔒', '税务中心 Pro 🔒', 'Stripe / USDT 双支付'] },
+          pro: { name: '专业版', cta: '升级专业版', highlight: true, items: ['1 个 API 令牌 · 1000 次/日', 'Webhook 实时告警', '聪明钱追踪 🔒', '税务中心 Pro 🔒', '🟢 USDT 加密支付 · 到账即开通'] },
           business: { name: '商业版', cta: '联系销售', highlight: false, items: ['5 个 API 令牌 · 10000 次/日', '全部 Pro 功能', '优先支持', '定制风险标签库'] },
         };
         const next = j.plans.map((p: any) => {
@@ -294,6 +294,9 @@ export default function LandingPage() {
         <motion.h2 {...fadeUp} className="text-center text-3xl font-bold">
           透明定价
         </motion.h2>
+        <p className="mt-3 text-center text-sm text-slate-400">
+          支持 <span className="font-semibold text-neon-green">🟢 USDT 加密支付（TRC-20）</span> · 到账即开通 · 非托管直达运营方钱包，无需银行卡
+        </p>
         <div className="mt-10 grid gap-6 sm:grid-cols-3">
           {pricing.map((p, i) => (
             <motion.div
