@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { checkSchema } from '@/lib/validation';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { findInBlacklist, sourceLabelOf } from '@/lib/blacklist';
+import { countBlocked } from '@/lib/stats';
 import { scoreAddress } from '@/lib/tron';
 import { authenticateKey } from '@/lib/billing';
 import {
@@ -63,6 +64,7 @@ export async function POST(req: Request) {
   // 2) 黑名单命中 = 红色短路（按链匹配或 any）
   const hit = findInBlacklist(address, chain);
   if (hit) {
+    countBlocked();
     const reasons = [`命中本地风险标签库：${hit.label}`];
     if (hit.note) reasons.push(`标签备注：${hit.note}`);
     reasons.push('建议立即停止与该地址的一切资金往来。');
@@ -82,6 +84,7 @@ export async function POST(req: Request) {
   // 3) 分派到对应链分析器
   if (chain === 'tron') {
     const r = await scoreAddress(address);
+    if (r.level === 'red') countBlocked();
     return NextResponse.json({
       chain,
       level: r.level,
@@ -94,5 +97,6 @@ export async function POST(req: Request) {
     });
   }
   const r = chain === 'btc' ? await scoreBtcAddress(address) : await scoreEthAddress(address);
+  if (r.level === 'red') countBlocked();
   return NextResponse.json({ ...r, quota });
 }
