@@ -11,6 +11,7 @@ import {
   Lock,
   Check,
   Landmark,
+  Loader2,
 } from 'lucide-react';
 import AddressChecker from '@/components/AddressChecker';
 import Counter from '@/components/Counter';
@@ -24,23 +25,105 @@ const fadeUp = {
   transition: { duration: 0.55 },
 } as const;
 
+/** Official support / sales channel (Telegram) */
 const TELEGRAM = 'https://t.me/+85293877936';
+
+function LeadForm() {
+  const [form, setForm] = useState({ name: '', contact: '', company: '', interest: 'rwa', message: '' });
+  const [state, setState] = useState<'idle' | 'busy' | 'ok' | 'err'>('idle');
+  const [msg, setMsg] = useState('');
+
+  async function submit() {
+    if (state === 'busy') return;
+    setState('busy');
+    setMsg('');
+    try {
+      const res = await fetch('/api/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setState('err');
+        setMsg(json?.error || 'Submission failed, please try again later');
+      } else {
+        setState('ok');
+        setMsg(json?.message || 'Booking received');
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('cs:open-chat', { detail: { prefill: 'I just booked a consultation' } }));
+        }, 900);
+      }
+    } catch {
+      setState('err');
+      setMsg('Network error, please try again');
+    }
+  }
+
+  const inputCls =
+    'w-full rounded-lg border border-cyber-700 bg-cyber-950 px-3 py-2.5 text-sm outline-none placeholder:text-slate-500 focus:border-neon-cyan/60';
+
+  return (
+    <div className="grid gap-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <input className={inputCls} placeholder="Name / title *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <input className={inputCls} placeholder="Contact (Telegram / email) *" value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })} />
+      </div>
+      <input className={inputCls} placeholder="Company / organization" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
+      <select className={inputCls} value={form.interest} onChange={(e) => setForm({ ...form, interest: e.target.value })}>
+        <option value="rwa">RWA tokenization compliance consulting</option>
+        <option value="stablecoin">Stablecoin payment compliance</option>
+        <option value="api">Risk screening API access</option>
+        <option value="license">Commercial license / private deployment</option>
+        <option value="other">Other</option>
+      </select>
+      <textarea className={`${inputCls} min-h-[84px]`} placeholder="Additional notes (optional)" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} />
+      <button
+        onClick={submit}
+        disabled={state === 'busy'}
+        className="flex items-center justify-center gap-2 rounded-lg bg-neon-cyan/90 px-4 py-2.5 text-sm font-semibold text-cyber-950 transition hover:bg-neon-cyan disabled:opacity-50"
+      >
+        {state === 'busy' && <Loader2 size={15} className="animate-spin" />}
+        {state === 'busy' ? 'Submitting…' : 'Book a compliance consultation'}
+      </button>
+      {state === 'ok' && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 260, damping: 16 }}
+          className="flex items-center gap-2"
+        >
+          <motion.span
+            initial={{ scale: 0, rotate: -90 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 14, delay: 0.1 }}
+            className="flex h-6 w-6 items-center justify-center rounded-full bg-neon-green/20"
+          >
+            <Check size={14} className="text-neon-green" />
+          </motion.span>
+          <p className="text-sm text-neon-green">{msg}</p>
+        </motion.div>
+      )}
+      {state === 'err' && msg && <p className="text-sm text-neon-red">{msg}</p>}
+    </div>
+  );
+}
 
 const FEATURES = [
   {
     icon: Radar,
     title: 'Address Monitoring',
-    desc: 'Monitor counterparty addresses and associated clusters 24/7. Instant push on risk-label changes with full fund-flow visibility.',
+    desc: 'Monitor counterparty addresses and associated clusters 24/7 with instant push on risk-label changes and full fund-flow visibility.',
   },
   {
     icon: ShieldCheck,
     title: 'Payment Firewall',
-    desc: 'Screen dirty USDT before it hits your checkout. The API returns a red/yellow/green verdict in 3 seconds to keep your accounts safe.',
+    desc: 'Block dirty USDT before it reaches your checkout. The API returns a red/yellow/green verdict in 3 seconds to keep your accounts safe.',
   },
   {
     icon: FileBarChart,
     title: 'Tax Reports',
-    desc: 'Generate on-chain income/expense ledgers and compliance reports by jurisdiction. One-click export with audit trails.',
+    desc: 'On-chain income/expense ledgers and compliance reports by jurisdiction, one-click export, audit trails.',
   },
 ];
 
@@ -66,7 +149,7 @@ export default function EnLandingPage() {
   const [pricing, setPricing] = useState(PRICING_FALLBACK);
   const [liveStats, setLiveStats] = useState<{ watchedAddresses: number; blockedTransactions: number; riskLabels: number } | null>(null);
 
-  // Live statistics (real data): watched addresses / blocked transactions / risk label database
+  // Live statistics (real data)
   useEffect(() => {
     let alive = true;
     async function load() {
@@ -139,8 +222,8 @@ export default function EnLandingPage() {
           transition={{ duration: 0.6, delay: 0.15 }}
           className="mt-5 max-w-xl text-base text-slate-400 sm:text-lg"
         >
-          Screen counterparty addresses before you receive payments. Blacklisted funds, mixers and scam wallets —
-          <span className="text-slate-200"> red light means stop</span>.
+          Screen counterparty addresses before you receive funds. Blacklisted labels, mixer money, scam collectors —{' '}
+          <span className="text-slate-200">red light means stop</span>, protecting your accounts.
         </motion.p>
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -209,7 +292,7 @@ export default function EnLandingPage() {
             </span>
             <div className="flex-1">
               <h3 className="text-lg font-bold">On-chain Risk Alerts</h3>
-              <p className="mt-1 text-sm text-slate-400">Free public threat intel: phishing wallets · laundering channels · mixer entries · scam funds</p>
+              <p className="mt-1 text-sm text-slate-400">Free public on-chain threat intel: phishing collectors · laundering channels · mixer entries · scam funds</p>
             </div>
             <span className="text-neon-cyan transition group-hover:translate-x-1">→</span>
           </motion.a>
@@ -223,7 +306,7 @@ export default function EnLandingPage() {
             </span>
             <div className="flex-1">
               <h3 className="text-lg font-bold">Smart Money Tracker</h3>
-              <p className="mt-1 text-sm text-slate-400">Real on-chain footprints of institutions &amp; whales. First 3 addresses free.</p>
+              <p className="mt-1 text-sm text-slate-400">Real on-chain footprints of institutions &amp; whales. First 3 watched addresses free.</p>
             </div>
             <span className="text-neon-cyan transition group-hover:translate-x-1">→</span>
           </motion.a>
@@ -289,7 +372,7 @@ export default function EnLandingPage() {
         <p className="mt-4 text-center text-xs text-slate-500">🔒 features are exclusive to Pro and above</p>
       </section>
 
-      {/* RWA / stablecoin compliance consulting + Telegram contact */}
+      {/* RWA / stablecoin compliance consulting */}
       <motion.section id="consult" {...fadeUp} className="mx-auto max-w-5xl px-6 py-14">
         <div className="grid gap-8 rounded-2xl border border-cyber-700 bg-cyber-900/60 p-8 md:grid-cols-2">
           <div>
@@ -297,7 +380,7 @@ export default function EnLandingPage() {
             <h2 className="mt-4 text-2xl font-bold">RWA / Stablecoin Compliance Consulting</h2>
             <p className="mt-3 text-sm leading-relaxed text-slate-400">
               Compliance architecture design, on-chain risk control and audit support for RWA tokenization, stablecoin
-              payables and cross-border settlement — backed by a Hong Kong licensed advisor network. Response within 1 business day.
+              payments and cross-border settlement, backed by a Hong Kong licensed advisor network. Response within 1 business day.
             </p>
             <ul className="mt-4 space-y-2 text-sm text-slate-300">
               <li>· Compliance path assessment: Hong Kong / Singapore / Dubai</li>
@@ -305,29 +388,31 @@ export default function EnLandingPage() {
               <li>· On-chain fund tracing &amp; freeze-response support</li>
             </ul>
           </div>
-          <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-cyber-700 bg-cyber-950/50 p-8 text-center">
-            <p className="text-lg font-bold text-slate-200">Talk to us directly</p>
-            <p className="text-sm text-slate-400">
-              Sales, licensing, API access and consulting — reach the team on Telegram.
-            </p>
-            <a
-              href={TELEGRAM}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl bg-neon-cyan/90 px-6 py-3 text-sm font-bold text-cyber-950 transition hover:bg-neon-cyan"
-            >
-              ✈ Contact us on Telegram
-            </a>
-            <p className="text-xs text-slate-500">Typically replies within hours · Mon–Sat</p>
-          </div>
+          <LeadForm />
+        </div>
+        <div className="mt-6 flex flex-col items-center gap-2 rounded-xl border border-cyber-700 bg-cyber-950/50 p-5 text-center">
+          <p className="text-sm text-slate-300">
+            Prefer to talk to the team directly? Support / licensing / API access —{' '}
+            <span className="font-semibold text-slate-200">reach us on Telegram</span>
+          </p>
+          <a
+            href={TELEGRAM}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg bg-neon-cyan/90 px-5 py-2.5 text-sm font-bold text-cyber-950 transition hover:bg-neon-cyan"
+          >
+            ✈ Contact us on Telegram
+          </a>
+          <p className="text-xs text-slate-500">Typically replies within hours · Mon–Sat</p>
         </div>
       </motion.section>
 
       {/* Footer */}
       <footer className="border-t border-cyber-800 py-8 text-center text-xs text-slate-500">
         <p>© 2026 ChainSentinel Limited (Hong Kong). All rights reserved.</p>
+        <p className="mt-1">Risk results are signals only and do not constitute legal advice or investment advice.</p>
         <p className="mt-1">
-          Risk results are signals only and do not constitute legal or investment advice. Contact:{' '}
+          Support &amp; business:{' '}
           <a href={TELEGRAM} target="_blank" rel="noopener noreferrer" className="text-neon-cyan hover:underline">
             Telegram
           </a>
