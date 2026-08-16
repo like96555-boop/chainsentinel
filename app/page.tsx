@@ -147,6 +147,28 @@ const PRICING_FALLBACK: PricingItem[] = [
 
 export default function LandingPage() {
   const [pricing, setPricing] = useState(PRICING_FALLBACK);
+  const [liveStats, setLiveStats] = useState<{ watchedAddresses: number; blockedTransactions: number; riskLabels: number } | null>(null);
+
+  // 实时统计（真实数据）：已监控地址 / 已拦截风险交易 / 风险标签库规模
+  useEffect(() => {
+    let alive = true;
+    async function load() {
+      try {
+        const r = await fetch('/api/stats');
+        if (!r.ok) return;
+        const j = await r.json();
+        if (alive && j?.ok) setLiveStats(j);
+      } catch {
+        /* 统计接口不可用时保持占位，不展示假数据 */
+      }
+    }
+    load();
+    const t = setInterval(load, 60_000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, []);
 
   // 定价与促销后台可维护：从 /api/billing/plans 拉取，促销期自动显示划线价
   useEffect(() => {
@@ -217,22 +239,25 @@ export default function LandingPage() {
       {/* 主流币行情条 */}
       <MarketTicker />
 
-      {/* 信任区 */}
+      {/* 信任区：真实实时统计 */}
       <motion.section {...fadeUp} className="mx-auto max-w-5xl px-6 py-14">
         <div className="grid gap-6 rounded-2xl border border-cyber-700 bg-cyber-900/60 p-8 text-center sm:grid-cols-3">
           {[
-            { label: '已监控地址', value: 1280000, suffix: '+' },
-            { label: '已拦截风险交易', value: 46300, suffix: '+' },
-            { label: '风险标签库规模', value: 3200000, suffix: '+' },
+            { label: '已监控地址', value: liveStats?.watchedAddresses ?? 0 },
+            { label: '已拦截风险交易', value: liveStats?.blockedTransactions ?? 0 },
+            { label: '风险标签库规模', value: liveStats?.riskLabels ?? 0 },
           ].map((s) => (
             <div key={s.label}>
               <p className="text-3xl font-extrabold text-neon-cyan sm:text-4xl">
-                <Counter target={s.value} suffix={s.suffix} />
+                {liveStats ? <Counter target={s.value} /> : <span className="text-slate-600">—</span>}
               </p>
               <p className="mt-2 text-sm text-slate-400">{s.label}</p>
             </div>
           ))}
         </div>
+        <p className="mt-3 text-center text-xs text-slate-500">
+          实时统计 · 数据来自链哨监控记录与风险标签库（OFAC SDN + 公开事件）
+        </p>
       </motion.section>
 
       {/* 功能区 */}
