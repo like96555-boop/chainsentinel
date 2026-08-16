@@ -56,6 +56,13 @@ export default function NavBar() {
           >
             ✈ {isEn ? 'Telegram' : 'Telegram 客服'}
           </a>
+          <a
+            href={isEn ? '/' : '/en'}
+            title={isEn ? '切换为中文' : 'Switch to English'}
+            className="ml-1 inline-flex items-center gap-1 rounded-lg border border-slate-600/60 bg-slate-800/60 px-2.5 py-1.5 text-xs text-slate-300 transition hover:border-neon-cyan/60 hover:text-neon-cyan"
+          >
+            🌐 {isEn ? '中文' : 'EN'}
+          </a>
           <LoginButton lang={isEn ? 'en' : 'zh'} />
         </div>
       </nav>
