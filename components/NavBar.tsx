@@ -17,6 +17,7 @@ export default function NavBar() {
   ];
   const en = [
     { href: '/en', label: 'Home' },
+    { href: '/en/blog', label: 'Blog' },
     { href: '/dashboard', label: 'Plans' },
   ];
   const links = isEn ? en : zh;
