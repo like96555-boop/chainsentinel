@@ -3,8 +3,11 @@
 import { useEffect, useState } from 'react';
 
 /** 导航栏登录入口：未登录显示「登录 / 注册」，已登录显示账号 + 我的订阅 */
-export default function LoginButton() {
+export default function LoginButton({ lang = 'zh' }: { lang?: 'zh' | 'en' } = {}) {
   const [email, setEmail] = useState<string | null>(null);
+  const t = lang === 'en'
+    ? { subscription: 'My subscription', login: 'Log in / Sign up' }
+    : { subscription: '我的订阅', login: '登录 / 注册' };
 
   useEffect(() => {
     const check = () => {
@@ -25,7 +28,7 @@ export default function LoginButton() {
       <a
         href="/dashboard"
         className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs text-emerald-300 transition hover:bg-emerald-500/20"
-        title="我的订阅"
+        title={t.subscription}
       >
         <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
         {short}
@@ -37,7 +40,7 @@ export default function LoginButton() {
       href="/dashboard"
       className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#7170ff] to-[#9d8cff] px-3.5 py-1.5 text-xs font-semibold text-white transition hover:brightness-110"
     >
-      登录 / 注册
+      {t.login}
     </a>
   );
 }
