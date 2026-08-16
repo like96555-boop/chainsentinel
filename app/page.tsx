@@ -28,7 +28,47 @@ const fadeUp = {
 /** 官方客服 / 销售渠道（Telegram） */
 const TELEGRAM = 'https://t.me/+85293877936';
 
-function LeadForm() {
+function LeadForm({ lang = 'zh' }: { lang?: 'zh' | 'en' } = {}) {
+  const t =
+    lang === 'en'
+      ? {
+          name: 'Name / title *',
+          contact: 'Contact (Telegram / email / WeChat) *',
+          company: 'Company / organization',
+          interest: [
+            { v: 'rwa', l: 'RWA tokenization compliance consulting' },
+            { v: 'stablecoin', l: 'Stablecoin payment compliance' },
+            { v: 'api', l: 'Risk screening API access' },
+            { v: 'license', l: 'Commercial license / private deployment' },
+            { v: 'other', l: 'Other' },
+          ],
+          message: 'Additional notes (optional)',
+          submit: 'Book a compliance consultation',
+          submitting: 'Submitting…',
+          fail: 'Submission failed, please try again',
+          netErr: 'Network error, please try again',
+          ok: 'Booking received',
+          prefill: 'I just booked a consultation',
+        }
+      : {
+          name: '姓名 / 称呼 *',
+          contact: '联系方式（微信 / Telegram / 邮箱）*',
+          company: '公司 / 机构名称',
+          interest: [
+            { v: 'rwa', l: 'RWA 资产代币化合规咨询' },
+            { v: 'stablecoin', l: '稳定币收付合规方案' },
+            { v: 'api', l: '风控 API 接入' },
+            { v: 'license', l: '商业授权 / 私有化部署' },
+            { v: 'other', l: '其他' },
+          ],
+          message: '补充说明（可选）',
+          submit: '预约合规顾问',
+          submitting: '提交中…',
+          fail: '提交失败，请稍后再试',
+          netErr: '网络异常，请稍后再试',
+          ok: '预约成功',
+          prefill: '我刚预约了咨询',
+        };
   const [form, setForm] = useState({ name: '', contact: '', company: '', interest: 'rwa', message: '' });
   const [state, setState] = useState<'idle' | 'busy' | 'ok' | 'err'>('idle');
   const [msg, setMsg] = useState('');
@@ -46,20 +86,20 @@ function LeadForm() {
       const json = await res.json();
       if (!res.ok) {
         setState('err');
-        setMsg(json?.error || '提交失败，请稍后再试');
+        setMsg(json?.error || t.fail);
       } else {
         setState('ok');
-        setMsg(json?.message || '预约成功');
+        setMsg(json?.message || t.ok);
         // 销售闭环：成功后自动打开右下角 AI 客服并预填消息
         setTimeout(() => {
           window.dispatchEvent(
-            new CustomEvent('cs:open-chat', { detail: { prefill: '我刚预约了咨询' } })
+            new CustomEvent('cs:open-chat', { detail: { prefill: t.prefill } })
           );
         }, 900);
       }
     } catch {
       setState('err');
-      setMsg('网络异常，请稍后再试');
+      setMsg(t.netErr);
     }
   }
 
@@ -69,25 +109,23 @@ function LeadForm() {
   return (
     <div className="grid gap-3">
       <div className="grid gap-3 sm:grid-cols-2">
-        <input className={inputCls} placeholder="姓名 / 称呼 *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        <input className={inputCls} placeholder="联系方式（微信 / Telegram / 邮箱）*" value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })} />
+        <input className={inputCls} placeholder={t.name} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <input className={inputCls} placeholder={t.contact} value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })} />
       </div>
-      <input className={inputCls} placeholder="公司 / 机构名称" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
+      <input className={inputCls} placeholder={t.company} value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
       <select className={inputCls} value={form.interest} onChange={(e) => setForm({ ...form, interest: e.target.value })}>
-        <option value="rwa">RWA 资产代币化合规咨询</option>
-        <option value="stablecoin">稳定币收付合规方案</option>
-        <option value="api">风控 API 接入</option>
-        <option value="license">商业授权 / 私有化部署</option>
-        <option value="other">其他</option>
+        {t.interest.map((o) => (
+          <option key={o.v} value={o.v}>{o.l}</option>
+        ))}
       </select>
-      <textarea className={`${inputCls} min-h-[84px]`} placeholder="补充说明（可选）" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} />
+      <textarea className={`${inputCls} min-h-[84px]`} placeholder={t.message} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} />
       <button
         onClick={submit}
         disabled={state === 'busy'}
         className="flex items-center justify-center gap-2 rounded-lg bg-neon-cyan/90 px-4 py-2.5 text-sm font-semibold text-cyber-950 transition hover:bg-neon-cyan disabled:opacity-50"
       >
         {state === 'busy' && <Loader2 size={15} className="animate-spin" />}
-        预约合规顾问
+        {state === 'busy' ? t.submitting : t.submit}
       </button>
       {state === 'ok' && (
         <motion.div
