@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { computeTax, parseCsv, type TxRow } from '@/lib/tax';
+import { buildTaxReport } from '@/lib/tax-report';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { readBlacklist } from '@/lib/blacklist';
 import { z } from 'zod';
@@ -9,11 +10,13 @@ export const dynamic = 'force-dynamic';
 
 const schema = z.object({
   csv: z.string().min(1).max(500_000),
+  clientName: z.string().max(100).optional(),
+  preparedBy: z.string().max(100).optional(),
 });
 
 // 税表审计 · 核算接口
-// POST { csv: "date,symbol,type,qty,priceUsd,counterparty\n..." }
-// 返回三种成本法（FIFO/LIFO/HIFO）核算结果 + 审计联动标记
+// POST { csv: "date,symbol,type,qty,priceUsd,counterparty\n...", clientName?: "xxx" }
+// 返回三种成本法（FIFO/LIFO/HIFO）核算结果 + 审计联动标记 + 专业报告结构
 export async function POST(req: Request) {
   const ip = clientIp(req);
   const rl = rateLimit(`tax:${ip}`, 20, 60_000);
@@ -27,11 +30,16 @@ export async function POST(req: Request) {
 
   const blacklist = readBlacklist().map((b) => b.address);
   const results = computeTax(rows, blacklist);
+  const report = buildTaxReport(results, {
+    clientName: parsed.data.clientName || '',
+    preparedBy: parsed.data.preparedBy || '',
+  });
 
   return NextResponse.json({
     ok: true,
     rows: rows.length,
     results,
+    report,
     disclaimer: '核算结果仅为计算数据，不构成税务意见；重大事项请咨询持牌税务师。',
   });
 }
