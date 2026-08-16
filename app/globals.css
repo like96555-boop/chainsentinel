@@ -23,3 +23,18 @@ body {
     linear-gradient(90deg, rgba(56, 224, 255, 0.05) 1px, transparent 1px);
   background-size: 44px 44px;
 }
+
+/* ===== 打印友好：税表审计报告 ===== */
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  .no-print { display: none !important; }
+  .report-paper {
+    border: none !important;
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+  .report-paper table { page-break-inside: auto; }
+  .report-paper tr { page-break-inside: avoid; }
+}
