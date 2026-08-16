@@ -28,21 +28,18 @@ const LEVEL_UI = {
     ring: 'border-neon-green/50',
     text: 'text-neon-green',
     glow: 'shadow-[0_0_40px_-8px_rgba(34,255,157,0.45)]',
-    label: '低风险 · 可收款',
   },
   yellow: {
     icon: ShieldQuestion,
     ring: 'border-neon-yellow/50',
     text: 'text-neon-yellow',
     glow: 'shadow-[0_0_40px_-8px_rgba(255,214,10,0.4)]',
-    label: '中风险 · 建议复核',
   },
   red: {
     icon: ShieldAlert,
     ring: 'border-neon-red/60',
     text: 'text-neon-red',
     glow: 'shadow-[0_0_40px_-8px_rgba(255,77,94,0.5)]',
-    label: '高风险 · 立即停止往来',
   },
 } as const;
 
@@ -53,6 +50,51 @@ const CHAIN_META: Record<ChainId, { label: string; cls: string }> = {
 };
 
 const RECENT_KEY = 'cs_recent_checks';
+
+const T = {
+  zh: {
+    levelLabel: { green: '低风险 · 可收款', yellow: '中风险 · 建议复核', red: '高风险 · 立即停止往来' } as Record<'red' | 'yellow' | 'green', string>,
+    placeholder: '支持 TRON / BTC / ETH 地址，粘贴立即免费检测',
+    scanning: '扫描中',
+    check: '免费检测',
+    recent: '最近查询',
+    queryFailed: (s: string) => `查询失败（HTTP ${s}）`,
+    networkError: '网络异常，请稍后再试。',
+    score: (s: number) => `安全评分 ${s}/100`,
+    basis: '判定依据：',
+    source: '数据来源：',
+    blacklistHit: (label: string) => `命中本地风险标签库（精确地址匹配），标签「${label}」`,
+    logic: '判定逻辑：',
+    logicDetail: '未命中本地黑名单，按链上公开数据评估（合约识别 / 余额 / 近期交易活跃度），数据来自 TronGrid / Blockstream / 公共 RPC。',
+    notMarked: '未标注',
+    evidence: '链上证据',
+    again: '再查一个',
+    footnote: '数据来源：链上公开数据（TronGrid / Blockstream / 公共 RPC）+ 本地黑名单库；判定依据见上方逐条理由与链上证据（可点击复核）。结果仅为风险提示，不构成法律意见。',
+  },
+  en: {
+    levelLabel: { green: 'Low risk · Safe to receive', yellow: 'Medium risk · Review recommended', red: 'High risk · Stop immediately' } as Record<'red' | 'yellow' | 'green', string>,
+    placeholder: 'Paste a TRON / BTC / ETH address to check it for free',
+    scanning: 'Scanning',
+    check: 'Check free',
+    recent: 'Recent checks',
+    queryFailed: (s: string) => `Check failed (HTTP ${s})`,
+    networkError: 'Network error, please try again.',
+    score: (s: number) => `Risk score ${s}/100`,
+    basis: 'Basis: ',
+    source: 'Source: ',
+    blacklistHit: (label: string) => `Matched local risk label database (exact address match), label: "${label}"`,
+    logic: 'Logic: ',
+    logicDetail:
+      'No local blacklist match. Evaluated against public on-chain data (contract detection / balance / recent activity), sourced from TronGrid / Blockstream / public RPC.',
+    notMarked: 'Unlabeled',
+    evidence: 'On-chain evidence',
+    again: 'Check another',
+    footnote:
+      'Data sources: public on-chain data (TronGrid / Blockstream / public RPC) + local risk label database. Results are risk signals only and do not constitute legal advice.',
+  },
+} as const;
+
+type Lang = 'zh' | 'en';
 
 function loadRecent(): RecentItem[] {
   try {
@@ -74,7 +116,8 @@ function saveRecent(item: RecentItem) {
   }
 }
 
-export default function AddressChecker() {
+export default function AddressChecker({ lang = 'zh' }: { lang?: Lang } = {}) {
+  const t = T[lang];
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CheckResult | null>(null);
@@ -110,7 +153,7 @@ export default function AddressChecker() {
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json?.error || `查询失败（HTTP ${res.status}）`);
+        setError(json?.error || t.queryFailed(String(res.status)));
       } else {
         const r = json as CheckResult;
         setResult(r);
@@ -120,7 +163,7 @@ export default function AddressChecker() {
         }
       }
     } catch {
-      setError('网络异常，请稍后再试。');
+      setError(t.networkError);
     } finally {
       setLoading(false);
     }
@@ -142,7 +185,7 @@ export default function AddressChecker() {
           value={address}
           onChange={(e) => setAddress(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && check()}
-          placeholder="支持 TRON / BTC / ETH 地址，粘贴立即免费检测"
+          placeholder={t.placeholder}
           className="flex-1 bg-transparent px-4 py-3.5 text-sm outline-none placeholder:text-slate-500"
         />
         <button
@@ -151,7 +194,7 @@ export default function AddressChecker() {
           className="flex items-center gap-2 bg-neon-cyan/90 px-5 text-sm font-semibold text-cyber-950 transition hover:bg-neon-cyan disabled:opacity-50"
         >
           {loading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-          {loading ? '扫描中' : '免费检测'}
+          {loading ? t.scanning : t.check}
         </button>
       </div>
 
@@ -159,7 +202,7 @@ export default function AddressChecker() {
       {recent.length > 0 && !result && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="flex items-center gap-1 text-xs text-slate-500">
-            <History size={12} /> 最近查询
+            <History size={12} /> {t.recent}
           </span>
           {recent.map((r) => (
             <button
@@ -199,14 +242,14 @@ export default function AddressChecker() {
               <ui.icon size={30} className={ui.text} />
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <p className={`text-lg font-bold ${ui.text}`}>{ui.label}</p>
+                  <p className={`text-lg font-bold ${ui.text}`}>{t.levelLabel[result.level]}</p>
                   {chainMeta && (
                     <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${chainMeta.cls}`}>
                       {chainMeta.label}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-400">安全评分 {result.score}/100</p>
+                <p className="text-xs text-slate-400">{t.score(result.score)}</p>
               </div>
             </div>
             <ul className="mt-4 space-y-1.5">
@@ -222,17 +265,18 @@ export default function AddressChecker() {
               {result.blacklist ? (
                 <>
                   <p>
-                    <span className="font-medium text-slate-300">判定依据：</span>命中本地风险标签库（精确地址匹配），标签「{result.blacklist.label}」
+                    <span className="font-medium text-slate-300">{t.basis}</span>
+                    {t.blacklistHit(result.blacklist.label)}
                   </p>
                   <p>
-                    <span className="font-medium text-slate-300">数据来源：</span>
-                    {result.blacklist.sourceLabel || result.blacklist.source || '未标注'}
+                    <span className="font-medium text-slate-300">{t.source}</span>
+                    {result.blacklist.sourceLabel || result.blacklist.source || t.notMarked}
                   </p>
                 </>
               ) : (
                 <p>
-                  <span className="font-medium text-slate-300">判定逻辑：</span>未命中本地黑名单，按链上公开数据评估（合约识别 / 余额 / 近期交易活跃度），
-                  数据来自 TronGrid / Blockstream / 公共 RPC。
+                  <span className="font-medium text-slate-300">{t.logic}</span>
+                  {t.logicDetail}
                 </p>
               )}
             </div>
@@ -245,19 +289,17 @@ export default function AddressChecker() {
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-xs text-neon-cyan hover:underline"
                 >
-                  链上证据 <ExternalLink size={12} />
+                  {t.evidence} <ExternalLink size={12} />
                 </a>
               ))}
               <button
                 onClick={reset}
                 className="ml-auto flex items-center gap-1.5 rounded-lg border border-cyber-700 px-3 py-1.5 text-xs text-slate-300 transition hover:border-neon-cyan/60 hover:text-neon-cyan"
               >
-                <RotateCcw size={12} /> 再查一个
+                <RotateCcw size={12} /> {t.again}
               </button>
             </div>
-            <p className="mt-3 border-t border-cyber-700/60 pt-2 text-[10px] leading-relaxed text-slate-500">
-              数据来源：链上公开数据（TronGrid / Blockstream / 公共 RPC）+ 本地黑名单库；判定依据见上方逐条理由与链上证据（可点击复核）。结果仅为风险提示，不构成法律意见。
-            </p>
+            <p className="mt-3 border-t border-cyber-700/60 pt-2 text-[10px] leading-relaxed text-slate-500">{t.footnote}</p>
           </motion.div>
         )}
       </AnimatePresence>
