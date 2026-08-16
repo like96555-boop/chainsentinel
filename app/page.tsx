@@ -25,6 +25,9 @@ const fadeUp = {
   transition: { duration: 0.55 },
 } as const;
 
+/** 官方客服 / 销售渠道（Telegram） */
+const TELEGRAM = 'https://t.me/+85293877936';
+
 function LeadForm() {
   const [form, setForm] = useState({ name: '', contact: '', company: '', interest: 'rwa', message: '' });
   const [state, setState] = useState<'idle' | 'busy' | 'ok' | 'err'>('idle');
@@ -355,7 +358,9 @@ export default function LandingPage() {
                 ))}
               </ul>
               <a
-                href={p.name === '商业授权' ? '#consult' : '#'}
+                href={p.id === 'business' ? TELEGRAM : '/dashboard'}
+                target={p.id === 'business' ? '_blank' : undefined}
+                rel={p.id === 'business' ? 'noopener noreferrer' : undefined}
                 className={`mt-6 rounded-lg px-4 py-2.5 text-center text-sm font-semibold transition ${
                   p.highlight
                     ? 'bg-neon-cyan/90 text-cyber-950 hover:bg-neon-cyan'
@@ -388,12 +393,32 @@ export default function LandingPage() {
           </div>
           <LeadForm />
         </div>
+        <div className="mt-6 flex flex-col items-center gap-2 rounded-xl border border-cyber-700 bg-cyber-950/50 p-5 text-center">
+          <p className="text-sm text-slate-300">
+            想直接跟团队聊？客服 / 商业授权 / API 接入 —— <span className="font-semibold text-slate-200">Telegram 直达</span>
+          </p>
+          <a
+            href={TELEGRAM}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg bg-neon-cyan/90 px-5 py-2.5 text-sm font-bold text-cyber-950 transition hover:bg-neon-cyan"
+          >
+            ✈ Telegram 联系客服
+          </a>
+          <p className="text-xs text-slate-500">通常数小时内回复 · 周一至周六</p>
+        </div>
       </motion.section>
 
       {/* 页脚 */}
       <footer className="border-t border-cyber-800 py-8 text-center text-xs text-slate-500">
         <p>© 2026 ChainSentinel Limited (Hong Kong). All rights reserved.</p>
         <p className="mt-1">风控结果仅为风险提示，不构成法律意见或投资建议。</p>
+        <p className="mt-1">
+          客服与商业合作：
+          <a href={TELEGRAM} target="_blank" rel="noopener noreferrer" className="text-neon-cyan hover:underline">
+            Telegram
+          </a>
+        </p>
       </footer>
     </main>
   );
