@@ -10,6 +10,7 @@ export default function NavBar() {
 
   const zh = [
     { href: '/', label: '首页' },
+    { href: '/blog', label: '博客' },
     { href: '/alerts', label: '风险警示榜' },
     { href: '/smart-money', label: '聪明钱追踪' },
     { href: '/tax', label: '税务中心' },
