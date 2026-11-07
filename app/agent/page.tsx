@@ -96,6 +96,7 @@ export default function AgentPage() {
             ['/llms.txt', '给 LLM 的简短入口'],
             ['/llms-full.txt', '完整集成文档'],
             ['/api/v1/manifest', '机器可读能力清单与价目'],
+            ['/api/v1/quote', '一次性充值报价'],
             ['/api/openapi.json', 'OpenAPI 3.1 规范'],
             ['/.well-known/agent-card.json', 'Agent Card 发现文档'],
             ['/api/mcp', 'MCP 风格 JSON-RPC 端点'],
@@ -113,6 +114,7 @@ export default function AgentPage() {
         <ul className="mt-4 space-y-2 text-sm text-slate-300">
           <li>• 免费层：30 次/分钟/IP，零配置。</li>
           <li>• 预付层：$0.01 / 次成功调用，1 USDT ≈ 100 次；TRON TRC20 非托管收款，服务不持有私钥。</li>
+          <li>• 充值先取一次性报价（唯一 6 位小数金额），按精确金额转账；金额不符无法认领，防止他人冒领公开地址上的历史入账。</li>
           <li>• 幂等：同一 txId 只入账一次；带 X-Request-Id 的调用不会重复扣费。</li>
           <li>• 只读风控筛查，不执行交易、不托管资金、不协助规避制裁；结果是风险信号，不构成法律意见。</li>
         </ul>

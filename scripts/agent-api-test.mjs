@@ -82,24 +82,36 @@ async function main() {
 
   // 4. 付费层（仅本地开发测试模式）
   if (TEST_MODE) {
-    const txId = `test_1_${Date.now().toString(36)}_agenttest`;
-    const topup = await post('/api/v1/topup', { txId });
+    // 4.1 一次性报价与冒领防护
+    const quote = await post('/api/v1/quote', {});
+    const quoteId = quote.json?.quoteId;
+    const amount = quote.json?.amountUsdt;
+    ok('一次性报价返回唯一 6 位小数金额', quote.status === 200 && typeof quoteId === 'string' && typeof amount === 'number' && amount >= 1 && amount < 2);
+    const noQuote = await post('/api/v1/topup', { txId: 'test_' + amount + '_noquote' });
+    ok('缺少 quoteId → QUOTE_REQUIRED（防冒领）', noQuote.status === 400 && noQuote.json?.error?.code === 'QUOTE_REQUIRED');
+    const wrongAmount = await post('/api/v1/topup', { txId: `test_${amount + 0.0001}_wrong`, quoteId });
+    ok('金额不符 → AMOUNT_MISMATCH', wrongAmount.status === 400 && wrongAmount.json?.error?.code === 'AMOUNT_MISMATCH');
+
+    const txId = `test_${amount}_${Date.now().toString(36)}_agenttest`;
+    const topup = await post('/api/v1/topup', { txId, quoteId });
     const cred = topup.json?.credential;
     ok('充值 → 返回 cs_agent_ 凭证', topup.status === 200 && typeof cred === 'string' && cred.startsWith('cs_agent_'));
-    ok('充值余额与预估次数正确', topup.json?.balanceUsd === 1 && topup.json?.estimatedCalls === 100);
-    const replay = await post('/api/v1/topup', { txId });
-    ok('同一 txId 重放不重复入账', replay.json?.alreadyClaimed === true && replay.json?.credential === cred && replay.json?.balanceUsd === 1);
+    ok('充值余额与报价金额一致', topup.json?.balanceUsd === amount && topup.json?.estimatedCalls === Math.floor(amount / 0.01));
+    const replay = await post('/api/v1/topup', { txId, quoteId });
+    ok('同一 txId 重放不重复入账', replay.json?.alreadyClaimed === true && replay.json?.credential === cred && replay.json?.balanceUsd === amount);
+    const stolen = await post('/api/v1/topup', { txId, quoteId: (await post('/api/v1/quote', {})).json?.quoteId });
+    ok('同一 txId 无法被别的报价冒领', stolen.status === 400 && ['QUOTE_REUSED', 'QUOTE_TX_MISMATCH'].includes(stolen.json?.error?.code));
 
     const auth = { Authorization: `Bearer ${cred}` };
     const bal0 = await call('/api/v1/balance', { headers: auth });
-    ok('余额查询', bal0.status === 200 && bal0.json?.balanceUsd === 1);
+    ok('余额查询', bal0.status === 200 && bal0.json?.balanceUsd === amount);
 
     const rid = 'req_idempotent_' + Date.now();
     const p1 = await post('/api/v1/check', { address: RISKY }, { ...auth, 'X-Request-Id': rid });
     const p2 = await post('/api/v1/check', { address: RISKY }, { ...auth, 'X-Request-Id': rid });
     const bal1 = await call('/api/v1/balance', { headers: auth });
     ok('付费调用成功并计费', p1.status === 200 && p1.json?.meta?.tier === 'prepaid' && p1.json?.meta?.billedUsd === 0.01);
-    ok('X-Request-Id 幂等（重复不扣费）', p2.json?.meta?.billedUsd === 0 && bal1.json?.balanceUsd === 0.99);
+    ok('X-Request-Id 幂等（重复不扣费）', p2.json?.meta?.billedUsd === 0 && Math.abs(bal1.json?.balanceUsd - (amount - 0.01)) < 1e-8);
     ok('付费响应带余额头', p1.headers.get('x-agent-balance-usd') !== null);
 
     const invalid = await post('/api/v1/check', { address: RISKY }, { Authorization: 'Bearer cs_agent_deadbeef' });
@@ -107,7 +119,7 @@ async function main() {
 
     // 耗尽余额 → 402 且带完整支付指引（100 次 × 0.01，黑名单短路不触发上游）
     let last = null;
-    for (let i = 0; i < 100; i += 1) {
+    for (let i = 0; i < 220; i += 1) {
       last = await post('/api/v1/check', { address: RISKY }, auth);
       if (last.status === 402) break;
     }

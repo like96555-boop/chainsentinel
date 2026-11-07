@@ -1,9 +1,9 @@
 // 链哨 · Agent 充值凭证校验
-// 只做一件事：确认某笔 TRON USDT 转账真实打进了运营自持地址，且未被认领过。
+// 确认某笔 TRON USDT 转账真实打进了运营自持地址、金额与一次性报价精确匹配、且未被认领过。
 // 不托管资金、不生成私钥、不代发交易。
 import { getUsdtConfig, fetchUsdtTransfers } from '@/lib/usdt';
 import { readOrders } from '@/lib/orders';
-import { MIN_TOPUP_USDT } from '@/lib/agent-billing';
+import { MIN_TOPUP_USDT, quoteForTx } from '@/lib/agent-billing';
 
 export interface VerifiedTransfer {
   txId: string;
@@ -14,17 +14,42 @@ export interface VerifiedTransfer {
 
 export type VerifyResult =
   | { ok: true; transfer: VerifiedTransfer }
-  | { ok: false; reason: 'PAYMENTS_NOT_CONFIGURED' | 'INVALID_TXID' | 'TX_NOT_FOUND' | 'TX_ALREADY_USED' | 'TX_UNCONFIRMED' | 'AMOUNT_TOO_SMALL' | 'UPSTREAM_UNAVAILABLE'; message: string };
+  | {
+      ok: false;
+      reason:
+        | 'PAYMENTS_NOT_CONFIGURED' | 'INVALID_TXID' | 'TX_NOT_FOUND' | 'TX_ALREADY_USED' | 'TX_UNCONFIRMED'
+        | 'QUOTE_REQUIRED' | 'QUOTE_REUSED' | 'AMOUNT_TOO_SMALL' | 'AMOUNT_MISMATCH' | 'UPSTREAM_UNAVAILABLE';
+      message: string;
+      expectedAmountUsdt?: number;
+    };
+
+export interface VerifyOptions {
+  /** 一次性报价的精确金额；缺失即拒绝（防止冒领公开地址上的历史入账） */
+  expectedAmountUsdt?: number;
+  quoteId?: string;
+}
+
+const AMOUNT_TOLERANCE = 0.000002; // USDT 6 位小数，允许 2 个最小单位的舍入差
 
 /**
  * 校验充值交易。
  * - 复用 lib/usdt.ts 的 TronGrid 查询（唯一链上取数入口，禁止另写一套）
- * - 同一 txId 若已被订阅订单使用，拒绝重复认领（防止一笔钱换两份权益）
+ * - 必须带一次性报价金额：运营收款地址是公开的，若只按 txId 认领，任何人都能拿别人的到账记录领额度
+ * - 同一 txId 若已被订阅订单或其他报价使用，拒绝重复认领
  * - 本地开发测试：仅当 NODE_ENV !== production 且 AGENT_API_TEST=1 时接受 test_ 前缀的合成交易
  */
-export async function verifyTopupTransfer(txId: string): Promise<VerifyResult> {
+export async function verifyTopupTransfer(txId: string, opts: VerifyOptions = {}): Promise<VerifyResult> {
   const cfg = getUsdtConfig();
   const isTest = process.env.NODE_ENV !== 'production' && process.env.AGENT_API_TEST === '1' && txId.startsWith('test_');
+  const expected = opts.expectedAmountUsdt;
+
+  if (typeof expected !== 'number' || !Number.isFinite(expected) || expected < MIN_TOPUP_USDT) {
+    return {
+      ok: false,
+      reason: 'QUOTE_REQUIRED',
+      message: '充值前必须先调用 POST /api/v1/quote 获取一次性精确金额，并按该金额转账。只有 txId 无法证明这笔钱属于你。',
+    };
+  }
 
   if (!cfg.address && !isTest) {
     return { ok: false, reason: 'PAYMENTS_NOT_CONFIGURED', message: '运营方尚未在后台配置 USDT 收款地址，Agent 充值暂不可用；免费层仍可调用。' };
@@ -37,11 +62,19 @@ export async function verifyTopupTransfer(txId: string): Promise<VerifyResult> {
   if (readOrders().some((o) => o.usdtTxId === txId)) {
     return { ok: false, reason: 'TX_ALREADY_USED', message: '该交易已用于订阅订单激活，不能重复认领。' };
   }
+  // 已被别的报价绑定 → 拒绝
+  const bound = quoteForTx(txId);
+  if (bound && bound.quoteId !== opts.quoteId) {
+    return { ok: false, reason: 'QUOTE_REUSED', message: '该交易已绑定另一个充值报价，不能重复认领。' };
+  }
 
   if (isTest) {
     console.warn('[payment-proof] 开发测试模式：接受合成交易，绝不会在 production 生效');
     const m = txId.match(/^test_([\d.]+)_/);
     const amount = m ? Number(m[1]) : MIN_TOPUP_USDT;
+    if (Math.abs(amount - expected) > AMOUNT_TOLERANCE) {
+      return { ok: false, reason: 'AMOUNT_MISMATCH', message: `到账金额 ${amount} 与报价 ${expected} 不一致。`, expectedAmountUsdt: expected };
+    }
     return { ok: true, transfer: { txId, amountUsd: amount, from: 'TEST', confirmed: true } };
   }
 
@@ -60,10 +93,15 @@ export async function verifyTopupTransfer(txId: string): Promise<VerifyResult> {
     return { ok: false, reason: 'TX_UNCONFIRMED', message: '交易尚未确认，请稍后重试。' };
   }
   if (hit.value < MIN_TOPUP_USDT) {
-    return { ok: false, reason: 'AMOUNT_TOO_SMALL', message: `最低充值 ${MIN_TOPUP_USDT} USDT，实际到账 ${hit.value}。` };
+    return { ok: false, reason: 'AMOUNT_TOO_SMALL', message: `最低充值 ${MIN_TOPUP_USDT} USDT，实际到账 ${hit.value}。`, expectedAmountUsdt: expected };
   }
-  return {
-    ok: true,
-    transfer: { txId: hit.txId, amountUsd: hit.value, from: hit.from, confirmed: true },
-  };
+  if (Math.abs(hit.value - expected) > AMOUNT_TOLERANCE) {
+    return {
+      ok: false,
+      reason: 'AMOUNT_MISMATCH',
+      message: `到账金额 ${hit.value} 与一次性报价 ${expected} 不一致。请按报价的精确金额（含 6 位小数）付款。`,
+      expectedAmountUsdt: expected,
+    };
+  }
+  return { ok: true, transfer: { txId: hit.txId, amountUsd: hit.value, from: hit.from, confirmed: true } };
 }

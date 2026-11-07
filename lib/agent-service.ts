@@ -32,15 +32,17 @@ export function paymentInstructions() {
     pricePerCallUsd: PRICE_PER_CALL_USD,
     minTopupUsdt: MIN_TOPUP_USDT,
     unit: '1 USDT ≈ 1 USD',
+    quoteEndpoint: '/api/v1/quote',
     topupEndpoint: '/api/v1/topup',
     steps: [
-      'Send >= 1 USDT (TRC20) to the address above from the wallet the agent controls.',
-      'POST /api/v1/topup with {"txId":"<64-hex-tron-tx-hash>"}.',
+      'POST /api/v1/quote to get a one-time quoteId and a unique amountUsdt (e.g. 1.000137).',
+      'Send EXACTLY that amount of USDT (TRC20, 6 decimals) to the address above from the wallet the agent controls.',
+      'POST /api/v1/topup with {"txId":"<64-hex-tron-tx-hash>","quoteId":"<quoteId>"} within 30 minutes.',
       'Receive a Bearer credential (cs_agent_...); store it securely.',
       'Send Authorization: Bearer <credential> on subsequent /api/v1/check calls.',
       'Each successful check costs 0.01 USD; check GET /api/v1/balance any time.',
     ],
-    note: 'Non-custodial: funds go directly to the operator wallet. No card form, no KYC, no private key held by this service. This is an x402-inspired prepaid flow, not an official x402 facilitator integration.',
+    note: 'Non-custodial: funds go directly to the operator wallet. No card form, no KYC, no private key held by this service. The receiving address is public, so a one-time unique 6-decimal amount from /api/v1/quote is REQUIRED before paying — it prevents anyone from claiming someone else\'s incoming transfer. This is an x402-inspired prepaid flow, not an official x402 facilitator integration.',
   };
 }
 
@@ -113,7 +115,8 @@ export function agentManifest(base: string) {
         request: { address: 'T... / 1... / 0x... (string, 1-128 chars)' },
         response: { chain: 'tron|btc|eth', level: 'red|yellow|green', score: '0-100', reasons: 'string[]', evidenceLinks: 'string[]' },
       },
-      { method: 'POST', path: '/api/v1/topup', auth: 'none', description: 'Claim prepaid credits with one TRON USDT txId. Idempotent per txId.' },
+      { method: 'POST', path: '/api/v1/quote', auth: 'none', description: 'Get a one-time quoteId and a unique exact USDT amount (anti-claim-theft). Required before paying.' },
+      { method: 'POST', path: '/api/v1/topup', auth: 'none', description: 'Claim prepaid credits with {txId, quoteId}. Verifies the exact quoted amount on-chain. Idempotent per txId.' },
       { method: 'GET', path: '/api/v1/balance', auth: 'Bearer cs_agent_*', description: 'Read remaining credits and call count.' },
       { method: 'GET', path: '/api/v1/manifest', auth: 'none', description: 'This machine-readable service manifest.' },
       { method: 'POST', path: '/api/mcp', auth: 'none', description: 'MCP-style JSON-RPC endpoint: initialize / tools/list / tools/call.' },
@@ -128,7 +131,8 @@ export function agentManifest(base: string) {
     errorCodes: [
       'INVALID_JSON', 'INVALID_ADDRESS', 'UNSUPPORTED_ADDRESS_FORMAT', 'RATE_LIMITED',
       'PAYMENT_REQUIRED', 'INVALID_TOKEN', 'INSUFFICIENT_CREDIT', 'PAYMENTS_NOT_CONFIGURED',
-      'INVALID_TXID', 'TX_NOT_FOUND', 'TX_UNCONFIRMED', 'TX_ALREADY_USED', 'AMOUNT_TOO_SMALL', 'UPSTREAM_UNAVAILABLE',
+      'QUOTE_REQUIRED', 'QUOTE_INVALID', 'QUOTE_EXPIRED', 'QUOTE_TX_MISMATCH', 'QUOTE_REUSED',
+      'INVALID_TXID', 'TX_NOT_FOUND', 'TX_UNCONFIRMED', 'TX_ALREADY_USED', 'AMOUNT_TOO_SMALL', 'AMOUNT_MISMATCH', 'UPSTREAM_UNAVAILABLE',
     ],
     idempotency: {
       topup: 'Same txId always returns the same credential and never credits twice.',
@@ -167,7 +171,7 @@ export const AGENT_TOOLS = [
   },
   {
     name: 'topup_info',
-    description: 'Get the payment address, price per call, minimum top-up and the exact steps to add prepaid credits with TRON USDT. Also use after a 402 PAYMENT_REQUIRED response.',
+    description: 'Get the payment address, price per call, minimum top-up and the exact steps to add prepaid credits with TRON USDT. Also use after a 402 PAYMENT_REQUIRED response. Note: a one-time quote (POST /api/v1/quote) is required before paying — the exact 6-decimal amount binds the transfer to your claim.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
   },
 ] as const;

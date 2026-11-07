@@ -58,21 +58,31 @@ GET https://chainsentinel.hk/api/v1/topup
 
 Returns: `network: tron`, `asset: USDT`, `contract: TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t`, `address`, `minTopupUsdt: 1`, `pricePerCallUsd: 0.01`, and `steps[]`.
 
-Step 2 — send >= 1 USDT (TRC20) to that address from the wallet the agent controls.
+Step 2 — get a one-time quote (**required**):
 
-Step 3 — claim the credits:
+```
+POST https://chainsentinel.hk/api/v1/quote
+```
+
+Returns `{quoteId, amountUsdt: 1.000137, address, expiresAt, ttlSec, ...}`. `amountUsdt` is a unique 6-decimal amount generated for this quote.
+
+Why: the operator's receiving address is public. If credits could be claimed with only a txId, anyone could claim somebody else's incoming transfer. Binding the claim to a unique exact amount fixes this without requiring signatures, accounts or KYC.
+
+Step 3 — send **exactly** `amountUsdt` USDT (TRC20, 6 decimals) to the address from the wallet the agent controls. A transfer with any other amount cannot be claimed with this quoteId.
+
+Step 4 — claim the credits within 30 minutes:
 
 ```
 POST https://chainsentinel.hk/api/v1/topup
 Content-Type: application/json
 
-{"txId":"<64-hex-tron-tx-hash>"}
+{"txId":"<64-hex-tron-tx-hash>","quoteId":"q_..."}
 ```
 
-Response: `{ok:true, credential:"cs_agent_...", tokenType:"Bearer", balanceUsd:1, estimatedCalls:100, ...}`.
-The claim is idempotent: repeating the same txId returns the same credential and never double-credits. A txId already used for a human subscription order is rejected.
+Response: `{ok:true, credential:"cs_agent_...", tokenType:"Bearer", balanceUsd:1.000137, estimatedCalls:100, ...}`.
+The claim is idempotent: repeating the same txId + quoteId returns the same credential and never double-credits. A txId already used for a human subscription order, or bound to a different quote, is rejected. A claim without `quoteId` returns `QUOTE_REQUIRED`.
 
-Step 4 — use the credential:
+Step 5 — use the credential:
 
 ```
 curl -X POST https://chainsentinel.hk/api/v1/check \
@@ -121,7 +131,8 @@ Every error: `{ "ok": false, "error": { "code": "...", "message": "...", "hint":
 | `INVALID_TOKEN` | 401 | Get a credential via /api/v1/topup. |
 | `INSUFFICIENT_CREDIT` | 402 | Top up. |
 | `PAYMENTS_NOT_CONFIGURED` | 503 | Operator has not configured a USDT address; free tier still works. |
-| `INVALID_TXID` / `TX_NOT_FOUND` / `TX_UNCONFIRMED` / `TX_ALREADY_USED` / `AMOUNT_TOO_SMALL` | 400 | Fix the txId or amount; `TX_UNCONFIRMED` should be retried. |
+| `QUOTE_REQUIRED` / `QUOTE_INVALID` / `QUOTE_EXPIRED` / `QUOTE_TX_MISMATCH` / `QUOTE_REUSED` | 400 | Get a fresh quote via POST /api/v1/quote and pay exactly its amount; quotes expire after 30 min. |
+| `INVALID_TXID` / `TX_NOT_FOUND` / `TX_UNCONFIRMED` / `TX_ALREADY_USED` / `AMOUNT_TOO_SMALL` / `AMOUNT_MISMATCH` | 400 | Fix txId or amount; `AMOUNT_MISMATCH` means the transfer does not equal the quoted 6-decimal amount; `TX_UNCONFIRMED` should be retried. |
 | `UPSTREAM_UNAVAILABLE` | 400 | Retry later. |
 
 ## 6. Discovery
@@ -136,7 +147,7 @@ Every error: `{ "ok": false, "error": { "code": "...", "message": "...", "hint":
 
 ## 7. Idempotency & safety
 
-- `POST /api/v1/topup`: idempotent by txId (a transfer can buy credits exactly once).
+- `POST /api/v1/quote` + `POST /api/v1/topup`: idempotent by txId and quoteId (a transfer can buy credits exactly once); the unique 6-decimal amount prevents claiming somebody else's transfer to the public receiving address.
 - `POST /api/v1/check` with `X-Request-Id`: idempotent debit.
 - Ledger: `data/agent-credits.json`, atomic writes, in-process serialization of concurrent credits/debits.
 - The service never holds a private key and never moves funds. Payments go directly to the operator's self-custodied TRON wallet; the server only reads public chain data via TronGrid.

@@ -28,6 +28,9 @@
     "freeCallsPerMinutePerIp": 30,
     "paidCallsPerMinute": 300,
     "minTopupUsdt": 1,
+    "quoteRequired": true,
+    "quoteEndpoint": "/api/v1/quote",
+    "quoteTtlSec": 1800,
     "network": "tron",
     "asset": "USDT",
     "contract": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
@@ -66,6 +69,19 @@
         }
       }
     },
+    "/api/v1/quote": {
+      "post": {
+        "operationId": "createQuote",
+        "summary": "Get a one-time quoteId and a unique exact USDT amount",
+        "description": "REQUIRED before paying. The operator receiving address is public, so a claim keyed only by txId could be stolen by anyone observing incoming transfers. A unique 6-decimal amount binds the transfer to this claim. Quotes expire after 30 minutes.",
+        "tags": ["billing"],
+        "responses": {
+          "200": { "description": "quoteId, amountUsdt, address, expiresAt, ttlSec, next steps", "content": { "application/json": { "schema": { "type": "object" } } } },
+          "429": { "description": "RATE_LIMITED", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      },
+      "get": { "operationId": "createQuoteGet", "summary": "Same as POST /api/v1/quote", "tags": ["billing"], "responses": { "200": { "description": "Quote", "content": { "application/json": { "schema": { "type": "object" } } } } } }
+    },
     "/api/v1/topup": {
       "get": {
         "operationId": "topupInfo",
@@ -75,13 +91,13 @@
       },
       "post": {
         "operationId": "claimTopup",
-        "summary": "Claim prepaid credits with one TRON USDT txId",
-        "description": "Verifies the transfer on-chain, then mints a Bearer credential. Idempotent per txId. Non-custodial — funds go directly to the operator wallet.",
+        "summary": "Claim prepaid credits with {txId, quoteId}",
+        "description": "Verifies the transfer on-chain AND that its amount exactly equals the one-time quoted 6-decimal USDT amount, then mints a Bearer credential. Idempotent per txId. Non-custodial — funds go directly to the operator wallet.",
         "tags": ["billing"],
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TopupRequest" } } } },
         "responses": {
           "200": { "description": "Credential and balance", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "credential": { "type": "string" }, "tokenType": { "type": "string" }, "balanceUsd": { "type": "number" }, "estimatedCalls": { "type": "integer" }, "alreadyClaimed": { "type": "boolean" } } } } } },
-          "400": { "description": "INVALID_TXID / TX_NOT_FOUND / TX_UNCONFIRMED / TX_ALREADY_USED / AMOUNT_TOO_SMALL / UPSTREAM_UNAVAILABLE", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "400": { "description": "QUOTE_REQUIRED / QUOTE_INVALID / QUOTE_EXPIRED / QUOTE_TX_MISMATCH / QUOTE_REUSED / INVALID_TXID / TX_NOT_FOUND / TX_UNCONFIRMED / TX_ALREADY_USED / AMOUNT_TOO_SMALL / AMOUNT_MISMATCH / UPSTREAM_UNAVAILABLE", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
           "503": { "description": "PAYMENTS_NOT_CONFIGURED — free tier still works", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
         }
       }
@@ -156,9 +172,12 @@
       },
       "TopupRequest": {
         "type": "object",
-        "required": ["txId"],
+        "required": ["txId", "quoteId"],
         "additionalProperties": false,
-        "properties": { "txId": { "type": "string", "description": "64-hex TRON transaction hash of a >=1 USDT TRC20 transfer to the configured address" } }
+        "properties": {
+          "txId": { "type": "string", "description": "64-hex TRON transaction hash of the TRC20 USDT transfer" },
+          "quoteId": { "type": "string", "description": "One-time quoteId from POST /api/v1/quote; the on-chain transfer amount must equal the quoted 6-decimal amountUsdt" }
+        }
       },
       "ErrorResponse": {
         "type": "object",

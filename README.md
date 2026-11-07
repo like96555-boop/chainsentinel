@@ -98,11 +98,14 @@ curl -X POST https://chainsentinel.hk/api/v1/check \
   -d '{"address":"TNiq9AXBp9EjUqhDhrwrfvAA8U3GUQZH81"}'
 # → {"chain":"tron","level":"red",...,"meta":{"tier":"free","billedUsd":0,"docs":"..."}}
 
-# 2) 需要更高频率：读支付信息 → 转 >=1 USDT → 用 txId 换凭证
+# 2) 需要更高频率：拿一次性报价 → 按精确金额转账 → 用 txId+quoteId 换凭证
 curl https://chainsentinel.hk/api/v1/topup            # GET 返回支付地址与 steps[]
+curl -X POST https://chainsentinel.hk/api/v1/quote    # → {"quoteId":"q_...","amountUsdt":1.000137,...}
+# 按 1.000137 USDT（6 位小数，TRC20）精确转账；金额不符无法认领
 curl -X POST https://chainsentinel.hk/api/v1/topup \
-  -H 'Content-Type: application/json' -d '{"txId":"<64-hex-tron-tx-hash>"}'
-# → {"credential":"cs_agent_...","balanceUsd":1,"estimatedCalls":100}
+  -H 'Content-Type: application/json' \
+  -d '{"txId":"<64-hex-tron-tx-hash>","quoteId":"q_..."}'
+# → {"credential":"cs_agent_...","balanceUsd":1.000137,"estimatedCalls":100}
 
 # 3) 带凭证调用；X-Request-Id 保证扣费幂等
 curl -X POST https://chainsentinel.hk/api/v1/check \
@@ -120,7 +123,7 @@ curl -X POST https://chainsentinel.hk/api/mcp \
 
 **机器可读错误**：所有错误都是 `{ok:false,error:{code,message,hint}}`；402 / 429 响应附带 `payment` 对象（地址、网络、最低充值、可执行 steps），Agent 可自行恢复，无需读人类文档。
 
-**幂等与安全**：同一 `txId` 只入账一次；带 `X-Request-Id` 的付费调用重复请求不会重复扣费；账本 `data/agent-credits.json` 原子落盘。服务不持有私钥、不托管资金、不执行交易。这是 x402 风格的预付流程，并非官方 x402 facilitator 集成。
+**幂等与安全**：同一 `txId` 只入账一次；带 `X-Request-Id` 的付费调用重复请求不会重复扣费；账本 `data/agent-credits.json` 原子落盘。收款地址是公开的，所以充值必须先取一次性报价（唯一 6 位小数金额），链上金额与报价不符即拒绝，防止他人冒领历史入账。服务不持有私钥、不托管资金、不执行交易。这是 x402 风格的预付流程，并非官方 x402 facilitator 集成。
 
 **桌面 MCP 客户端**：`node mcp/stdio-bridge.mjs`（零依赖），配置示例见 `mcp/README.md`。
 

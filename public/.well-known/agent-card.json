@@ -41,7 +41,7 @@
     {
       "id": "topup_info",
       "name": "Get top-up instructions",
-      "description": "Return the TRON USDT payment address, price per call, minimum top-up and exact machine-followable steps.",
+      "description": "Return the TRON USDT payment address, price per call, minimum top-up and exact machine-followable steps. A one-time quote (POST /api/v1/quote) is required before paying: its unique 6-decimal amount binds the transfer to the claim.",
       "tags": ["billing", "payment"],
       "examples": ["I got a 402 PAYMENT_REQUIRED, what do I do?"]
     }

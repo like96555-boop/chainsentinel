@@ -33,7 +33,7 @@ export async function GET(req: Request) {
       body: { address: 'TNiq9AXBp9EjUqhDhrwrfvAA8U3GUQZH81' },
     },
     freeTier: { callsPerMinutePerIp: FREE_CALLS_PER_MINUTE, auth: 'none' },
-    paidTier: { pricePerCallUsd: PRICE_PER_CALL_USD, auth: 'Bearer cs_agent_*', topup: '/api/v1/topup' },
+    paidTier: { pricePerCallUsd: PRICE_PER_CALL_USD, auth: 'Bearer cs_agent_*', quote: '/api/v1/quote', topup: '/api/v1/topup' },
     docs: `${base}/llms.txt`,
     openapi: `${base}/api/openapi.json`,
     manifest: `${base}/api/v1/manifest`,
@@ -91,7 +91,7 @@ export async function POST(req: Request) {
     if (cred.balanceUsd + 1e-9 < PRICE_PER_CALL_USD) {
       const e = agentError('PAYMENT_REQUIRED', `Prepaid balance is ${cred.balanceUsd.toFixed(4)} USD; each call costs ${PRICE_PER_CALL_USD} USD.`, 402, {
         payment: true,
-        hint: 'Top up with TRON USDT, then POST /api/v1/topup with the txId. The same credential keeps its balance.',
+        hint: 'POST /api/v1/quote for a one-time exact USDT amount, pay exactly that amount, then POST /api/v1/topup with {txId, quoteId}. The same credential keeps its balance.',
         extra: { balanceUsd: cred.balanceUsd, topupHowTo: paymentInstructions().steps },
       });
       return agentJson(e.body, e.status);

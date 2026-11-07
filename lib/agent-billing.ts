@@ -38,11 +38,82 @@ interface Debit {
   at: number;
 }
 
+export interface TopupQuote {
+  quoteId: string;
+  /** 一次性精确金额（6 位小数），付款方必须按此金额转账，防止他人冒领公开地址上的历史入账 */
+  amountUsdt: number;
+  createdAt: number;
+  expiresAt: number;
+  usedTxId?: string;
+}
+
 interface Ledger {
   credentials: AgentCredential[];
   claims: Claim[];
   debits: Debit[];
+  quotes: TopupQuote[];
   updatedAt: number;
+}
+
+export const QUOTE_TTL_MS = 30 * 60_000; // 报价有效期 30 分钟
+
+/** 生成一次性充值报价：1.000001 ~ 1.999999 USDT 的 6 位小数随机金额 */
+export function createQuote(): Promise<TopupQuote> {
+  return withLock('quote:create', () => {
+    const l = readLedger();
+    // 1 USDT + 最多 0.999999 的随机尾数；最小充值额约 1 USDT
+    const suffix = crypto.randomInt(1, 1_000_000); // 1..999999
+    const amountUsdt = Number((MIN_TOPUP_USDT + suffix / 1_000_000).toFixed(6));
+    const now = Date.now();
+    const quote: TopupQuote = {
+      quoteId: 'q_' + crypto.randomBytes(12).toString('hex'),
+      amountUsdt,
+      createdAt: now,
+      expiresAt: now + QUOTE_TTL_MS,
+    };
+    l.quotes.push(quote);
+    // 只保留最近 2000 个报价，避免账本无限增长
+    if (l.quotes.length > 2000) l.quotes = l.quotes.slice(-2000);
+    writeLedger(l);
+    return quote;
+  });
+}
+
+export function getQuote(quoteId: string): TopupQuote | null {
+  return readLedger().quotes.find((q) => q.quoteId === quoteId) || null;
+}
+
+/** 校验失败时释放本次绑定，避免一次金额错误的尝试把报价锁死（绑定本身仍防并发冒领） */
+export function releaseQuote(quoteId: string, txId: string): Promise<void> {
+  return withLock('quote:bind:' + quoteId, () => {
+    const l = readLedger();
+    const q = l.quotes.find((x) => x.quoteId === quoteId);
+    if (q && q.usedTxId === txId) {
+      delete q.usedTxId;
+      writeLedger(l);
+    }
+  });
+}
+
+/** 某笔交易是否已被别的报价绑定（防止同一 txId 换多份额度） */
+export function quoteForTx(txId: string): TopupQuote | null {
+  return readLedger().quotes.find((q) => q.usedTxId === txId) || null;
+}
+
+/** 把报价绑定到某笔交易；重复提交同一 quoteId+txId 返回同一绑定（幂等） */
+export function bindQuote(quoteId: string, txId: string): Promise<{ ok: boolean; reason?: 'QUOTE_INVALID' | 'QUOTE_EXPIRED' | 'QUOTE_TX_MISMATCH'; quote?: TopupQuote }> {
+  return withLock('quote:bind:' + quoteId, () => {
+    const l = readLedger();
+    const q = l.quotes.find((x) => x.quoteId === quoteId);
+    if (!q) return { ok: false, reason: 'QUOTE_INVALID' as const };
+    if (q.usedTxId && q.usedTxId !== txId) return { ok: false, reason: 'QUOTE_TX_MISMATCH' as const };
+    if (!q.usedTxId && Date.now() > q.expiresAt) return { ok: false, reason: 'QUOTE_EXPIRED' as const };
+    if (!q.usedTxId) {
+      q.usedTxId = txId;
+      writeLedger(l);
+    }
+    return { ok: true, quote: q };
+  });
 }
 
 function filePath(): string {
@@ -50,7 +121,7 @@ function filePath(): string {
 }
 
 function emptyLedger(): Ledger {
-  return { credentials: [], claims: [], debits: [], updatedAt: Date.now() };
+  return { credentials: [], claims: [], debits: [], quotes: [], updatedAt: Date.now() };
 }
 
 function readLedger(): Ledger {
@@ -61,6 +132,7 @@ function readLedger(): Ledger {
         credentials: Array.isArray(raw.credentials) ? raw.credentials : [],
         claims: Array.isArray(raw.claims) ? raw.claims : [],
         debits: Array.isArray(raw.debits) ? raw.debits : [],
+        quotes: Array.isArray(raw.quotes) ? raw.quotes : [],
         updatedAt: raw.updatedAt || Date.now(),
       };
     }
