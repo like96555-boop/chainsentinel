@@ -1,0 +1,147 @@
+# ChainSentinel · Complete Agent Integration Documentation
+
+This is the full reference for autonomous agents. Short version: /llms.txt.
+Machine manifest: /api/v1/manifest. Formal schemas: /api/openapi.json.
+
+## 1. What the service does
+
+Given one crypto address, ChainSentinel returns a risk verdict in about 3 seconds:
+
+- `chain`: tron | btc | eth (auto-detected from the address format)
+- `level`: red | yellow | green
+- `score`: 0-100 (lower = riskier; a red blacklist hit returns 5)
+- `reasons`: human- and machine-readable explanation array
+- `evidenceLinks`: block explorer links for manual verification
+- `blacklist`: label/source/sourceLabel when a curated label matched
+- `stats`: on-chain account stats when available (TRON)
+- `upstreamReachable`: whether the live chain data source responded
+- `meta`: requestId, tier, billedUsd, balanceUsd, freeCallsRemainingPerMinute, docs, openapi
+
+Data sources: OFAC SDN sanctions list, 900+ curated blacklist labels (hacks, scams, laundering clusters), plus live TRON/BTC/ETH heuristics. A local blacklist hit short-circuits to `red` without needing an upstream call.
+
+## 2. Free tier — zero setup
+
+```
+curl -X POST https://chainsentinel.hk/api/v1/check \
+  -H 'Content-Type: application/json' \
+  -d '{"address":"TNiq9AXBp9EjUqhDhrwrfvAA8U3GUQZH81"}'
+```
+
+- 30 requests per minute per IP (a separate bucket from the legacy /api/check limit of 10/min).
+- No API key, no signup, no cookie, no OAuth.
+- Response headers: `X-Request-Id`, `X-RateLimit-Remaining`, `X-Agent-Billed-Usd`.
+- A GET on /api/v1/check returns a complete curl example (useful for agents that probe first).
+
+Example response (abbreviated):
+
+```
+{
+  "chain": "tron",
+  "level": "red",
+  "score": 5,
+  "reasons": ["命中本地风险标签库：OFAC SDN 制裁（TRX）", "..."],
+  "evidenceLinks": ["https://tronscan.org/#/address/TNiq..."],
+  "blacklist": { "label": "OFAC SDN 制裁（TRX）", "source": "ofac-sdn", "sourceLabel": "美国财政部 OFAC 制裁名单（官方公开数据）" },
+  "meta": { "ok": true, "requestId": "req_...", "tier": "free", "billedUsd": 0, "pricePerCallUsd": 0, "docs": "https://chainsentinel.hk/llms.txt" }
+}
+```
+
+## 3. Prepaid tier — for high volume / long-running agents
+
+Price: `0.01 USD` per successful check. `1 USDT ≈ 1 USD`.
+
+Step 1 — get payment details (also returned inside any 402/429 response as `payment`):
+
+```
+GET https://chainsentinel.hk/api/v1/topup
+```
+
+Returns: `network: tron`, `asset: USDT`, `contract: TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t`, `address`, `minTopupUsdt: 1`, `pricePerCallUsd: 0.01`, and `steps[]`.
+
+Step 2 — send >= 1 USDT (TRC20) to that address from the wallet the agent controls.
+
+Step 3 — claim the credits:
+
+```
+POST https://chainsentinel.hk/api/v1/topup
+Content-Type: application/json
+
+{"txId":"<64-hex-tron-tx-hash>"}
+```
+
+Response: `{ok:true, credential:"cs_agent_...", tokenType:"Bearer", balanceUsd:1, estimatedCalls:100, ...}`.
+The claim is idempotent: repeating the same txId returns the same credential and never double-credits. A txId already used for a human subscription order is rejected.
+
+Step 4 — use the credential:
+
+```
+curl -X POST https://chainsentinel.hk/api/v1/check \
+  -H 'Authorization: Bearer cs_agent_...' \
+  -H 'X-Request-Id: my-unique-id-001' \
+  -H 'Content-Type: application/json' \
+  -d '{"address":"TNiq9AXBp9EjUqhDhrwrfvAA8U3GUQZH81"}'
+```
+
+- `X-Request-Id` makes a paid call idempotent: replaying the same id never debits twice.
+- Balance is never charged for a failed validation, an unsupported address format, or a 5xx.
+- Response headers include `X-Agent-Balance-Usd` and `X-Agent-Billed-Usd`.
+- `GET /api/v1/balance` with the same header returns balance, creditedUsd, calls, estimatedRemainingCalls and `lowBalance`.
+
+## 4. MCP-style JSON-RPC endpoint
+
+`POST https://chainsentinel.hk/api/mcp` — stateless, one JSON-RPC request per HTTP call, no session id, no SSE.
+
+```
+{"jsonrpc":"2.0","id":1,"method":"initialize"}
+{"jsonrpc":"2.0","id":2,"method":"tools/list"}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"check_address","arguments":{"address":"TNiq..."}}}
+```
+
+Tools:
+- `check_address` — args: `address` (required), `credential` (optional `cs_agent_*`). Free tier when omitted.
+- `get_balance` — args: `credential` (required).
+- `topup_info` — no args; returns address, price, minimum and exact steps.
+
+`tools/call` returns MCP-compatible `content[].text` (JSON string), `structuredContent`, and `isError`.
+`ping` returns `{}`. Notification methods (no id) get HTTP 202 with no body.
+
+Honest scope note: this is a lightweight JSON-RPC tools endpoint, not a full stateful MCP session server (no sessions, no SSE streams, no resources/prompts). A zero-dependency stdio bridge for desktop MCP clients ships in `mcp/stdio-bridge.mjs` in the source repo.
+
+## 5. Error contract
+
+Every error: `{ "ok": false, "error": { "code": "...", "message": "...", "hint": "..." }, "docs": "/llms.txt" }`.
+
+| code | HTTP | What to do |
+|---|---|---|
+| `INVALID_JSON` | 400 | Send a JSON object with Content-Type. |
+| `INVALID_ADDRESS` | 400 | `address` must be a 1-128 char string. |
+| `UNSUPPORTED_ADDRESS_FORMAT` | 400 | Use TRON T..., BTC 1/3/bc1..., or ETH 0x... |
+| `RATE_LIMITED` | 429 | Wait `retryAfterSec`, or add prepaid credits (300 calls/min). |
+| `PAYMENT_REQUIRED` | 402 | Read `payment.steps`, top up, keep using the same credential. |
+| `INVALID_TOKEN` | 401 | Get a credential via /api/v1/topup. |
+| `INSUFFICIENT_CREDIT` | 402 | Top up. |
+| `PAYMENTS_NOT_CONFIGURED` | 503 | Operator has not configured a USDT address; free tier still works. |
+| `INVALID_TXID` / `TX_NOT_FOUND` / `TX_UNCONFIRMED` / `TX_ALREADY_USED` / `AMOUNT_TOO_SMALL` | 400 | Fix the txId or amount; `TX_UNCONFIRMED` should be retried. |
+| `UPSTREAM_UNAVAILABLE` | 400 | Retry later. |
+
+## 6. Discovery
+
+- `/llms.txt` — short entry point
+- `/llms-full.txt` — this document
+- `/api/v1/manifest` — machine-readable capabilities, endpoints, prices, error codes
+- `/api/openapi.json` — OpenAPI 3.1 with request/response schemas
+- `/.well-known/agent-card.json` — agent card with skills and examples
+- `/agent` — human-readable integration page with structured data (SoftwareApplication + offers)
+- `robots.txt` explicitly allows `/api/v1/`, `/api/mcp`, `/llms.txt`, `/llms-full.txt`, `/agent` for AI crawlers, and lists the sitemap.
+
+## 7. Idempotency & safety
+
+- `POST /api/v1/topup`: idempotent by txId (a transfer can buy credits exactly once).
+- `POST /api/v1/check` with `X-Request-Id`: idempotent debit.
+- Ledger: `data/agent-credits.json`, atomic writes, in-process serialization of concurrent credits/debits.
+- The service never holds a private key and never moves funds. Payments go directly to the operator's self-custodied TRON wallet; the server only reads public chain data via TronGrid.
+- Read-only screening. No trading execution, no custody, no sanctions-evasion assistance. Risk signals, not legal advice.
+
+## 8. Legacy human API (unchanged)
+
+`POST /api/check` with `Authorization: Bearer cs_live_*` uses the existing daily-quota subscription plans (free 100/day, Pro $29/mo 1000/day, Business $199/mo 10000/day) with Stripe and TRON USDT checkout. Agents should prefer `/api/v1/check`, which needs no signup.

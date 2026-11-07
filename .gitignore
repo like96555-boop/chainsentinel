@@ -3,6 +3,9 @@ node_modules/
 
 # build
 .next/
+.next.bak-*/
+.next.devbak-*/
+tsconfig.tsbuildinfo
 out/
 
 # env & secrets
@@ -15,6 +18,8 @@ data/ofac-sdn-cache.json
 
 # 运行时数据（本地运营配置/日志，不入库；种子数据 blacklist.json/alerts.json 保留）
 data/api-keys.json
+data/agent-credits.json
+data/stats.json
 data/audit-log.json
 data/orders.json
 data/webhooks.json

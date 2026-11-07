@@ -1,18 +1,8 @@
 import { NextResponse } from 'next/server';
 import { checkSchema } from '@/lib/validation';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
-import { findInBlacklist, sourceLabelOf } from '@/lib/blacklist';
-import { countBlocked } from '@/lib/stats';
-import { scoreAddress } from '@/lib/tron';
 import { authenticateKey } from '@/lib/billing';
-import {
-  detectChain,
-  scoreBtcAddress,
-  scoreEthAddress,
-  explorerAddressUrl,
-  SUPPORTED_FORMATS_HINT,
-  type ChainId,
-} from '@/lib/chains';
+import { performAddressCheck } from '@/lib/check-engine';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -53,50 +43,6 @@ export async function POST(req: Request) {
     );
   }
 
-  const address = parsed.data.address.trim();
-
-  // 1) 识别链
-  const chain: ChainId | null = detectChain(address);
-  if (!chain) {
-    return NextResponse.json({ error: SUPPORTED_FORMATS_HINT }, { status: 400 });
-  }
-
-  // 2) 黑名单命中 = 红色短路（按链匹配或 any）
-  const hit = findInBlacklist(address, chain);
-  if (hit) {
-    countBlocked();
-    const reasons = [`命中本地风险标签库：${hit.label}`];
-    if (hit.note) reasons.push(`标签备注：${hit.note}`);
-    reasons.push('建议立即停止与该地址的一切资金往来。');
-    return NextResponse.json({
-      chain,
-      level: 'red',
-      score: 5,
-      reasons,
-      evidenceLinks: [explorerAddressUrl(chain, address)],
-      blacklist: { label: hit.label, source: hit.source, sourceLabel: sourceLabelOf(hit.source) },
-      stats: null,
-      upstreamReachable: true,
-      quota,
-    });
-  }
-
-  // 3) 分派到对应链分析器
-  if (chain === 'tron') {
-    const r = await scoreAddress(address);
-    if (r.level === 'red') countBlocked();
-    return NextResponse.json({
-      chain,
-      level: r.level,
-      score: r.score,
-      reasons: r.reasons,
-      evidenceLinks: r.evidenceLinks,
-      stats: r.stats ?? null,
-      upstreamReachable: r.trongridReachable,
-      quota,
-    });
-  }
-  const r = chain === 'btc' ? await scoreBtcAddress(address) : await scoreEthAddress(address);
-  if (r.level === 'red') countBlocked();
-  return NextResponse.json({ ...r, quota });
+  const result = await performAddressCheck(parsed.data.address.trim(), quota);
+  return NextResponse.json(result.body, { status: result.status });
 }

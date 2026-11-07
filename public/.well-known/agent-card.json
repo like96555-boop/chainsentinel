@@ -1,0 +1,67 @@
+{
+  "name": "ChainSentinel",
+  "title": "ChainSentinel · Crypto AML Risk Screening for AI Agents",
+  "version": "1.0.0",
+  "description": "On-chain AML and risk screening service for TRON, BTC and ETH addresses. Detects OFAC SDN sanctions addresses, blacklists, scam and laundering-linked funds. Autonomous agents can call it with no signup; high-volume use is paid with non-custodial TRON USDT prepaid credits.",
+  "url": "https://chainsentinel.hk",
+  "provider": { "organization": "ChainSentinel Limited", "url": "https://chainsentinel.hk" },
+  "documentationUrl": "https://chainsentinel.hk/llms-full.txt",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": false,
+    "authentication": "optional-bearer",
+    "payment": "prepaid-tron-usdt"
+  },
+  "defaultInputModes": ["application/json", "text/plain"],
+  "defaultOutputModes": ["application/json", "text/plain"],
+  "interfaces": [
+    { "type": "rest", "url": "https://chainsentinel.hk/api/v1/check", "spec": "https://chainsentinel.hk/api/openapi.json" },
+    { "type": "json-rpc-mcp-style", "url": "https://chainsentinel.hk/api/mcp", "methods": ["initialize", "tools/list", "tools/call", "ping"] },
+    { "type": "manifest", "url": "https://chainsentinel.hk/api/v1/manifest" },
+    { "type": "llms-txt", "url": "https://chainsentinel.hk/llms.txt" }
+  ],
+  "skills": [
+    {
+      "id": "check_address",
+      "name": "Check address risk",
+      "description": "Screen a TRON/BTC/ETH address for AML risk in ~3 seconds. Returns level, score, reasons and evidence links.",
+      "tags": ["aml", "kyc", "kyt", "sanctions", "ofac", "risk", "blockchain"],
+      "examples": ["Is TNiq9AXBp9EjUqhDhrwrfvAA8U3GUQZH81 sanctioned?", "Check this TRON address before receiving USDT"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"]
+    },
+    {
+      "id": "get_balance",
+      "name": "Check prepaid balance",
+      "description": "Read remaining USD credits and call count for a cs_agent_* credential.",
+      "tags": ["billing", "credits"],
+      "examples": ["How many API calls do I have left?"]
+    },
+    {
+      "id": "topup_info",
+      "name": "Get top-up instructions",
+      "description": "Return the TRON USDT payment address, price per call, minimum top-up and exact machine-followable steps.",
+      "tags": ["billing", "payment"],
+      "examples": ["I got a 402 PAYMENT_REQUIRED, what do I do?"]
+    }
+  ],
+  "pricing": {
+    "currency": "USD",
+    "pricePerCallUsd": 0.01,
+    "freeCallsPerMinutePerIp": 30,
+    "minTopupUsdt": 1,
+    "network": "tron",
+    "asset": "USDT"
+  },
+  "discovery": {
+    "llmsTxt": "https://chainsentinel.hk/llms.txt",
+    "llmsFullTxt": "https://chainsentinel.hk/llms-full.txt",
+    "openapi": "https://chainsentinel.hk/api/openapi.json",
+    "manifest": "https://chainsentinel.hk/api/v1/manifest",
+    "docsPage": "https://chainsentinel.hk/agent",
+    "sitemap": "https://chainsentinel.hk/sitemap.xml"
+  },
+  "compliance": "Read-only risk screening. No trading execution, no custody, no private keys, no sanctions-evasion assistance. Risk signals, not legal advice.",
+  "note": "This is a discovery document in the agent-card convention. The service is a stateless REST/JSON-RPC API, not an A2A task-based agent."
+}

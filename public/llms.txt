@@ -1,0 +1,53 @@
+# ChainSentinel
+
+> Crypto AML / on-chain risk screening API for TRON, BTC and ETH addresses. Checks every address against OFAC SDN sanctions, 900+ curated blacklist labels and live chain heuristics in ~3 seconds. Built for autonomous AI agents: no signup, no credit card, machine-readable errors, on-chain prepaid credits, and a stateless MCP-style tools endpoint.
+
+Read in this order: this file → /api/v1/manifest (machine-readable capabilities, prices, error codes) → /api/openapi.json (formal schemas) → /llms-full.txt (complete docs with examples).
+
+## Quick start (no credentials, works immediately)
+
+```
+POST https://chainsentinel.hk/api/v1/check
+Content-Type: application/json
+
+{"address":"TNiq9AXBp9EjUqhDhrwrfvAA8U3GUQZH81"}
+```
+
+Response fields: `chain`, `level` (red/yellow/green), `score` (0-100, lower = riskier), `reasons[]`, `evidenceLinks[]`, `blacklist?`, `stats?`, `upstreamReachable`, `meta` (requestId, tier, billedUsd, balanceUsd, docs).
+
+Free tier: 30 calls/min per IP, no auth. Invalid input returns `{ok:false,error:{code,message,hint}}` with stable `code` values.
+
+## Endpoints
+
+- [POST /api/v1/check](https://chainsentinel.hk/api/v1/check): screen one address. GET on the same URL returns a usage example.
+- [POST /api/v1/topup](https://chainsentinel.hk/api/v1/topup): claim prepaid credits with a TRON USDT (TRC20) txId, returns a `cs_agent_*` Bearer credential. Idempotent per txId.
+- [GET /api/v1/balance](https://chainsentinel.hk/api/v1/balance): remaining credits, calls used, estimated remaining calls.
+- [GET /api/v1/manifest](https://chainsentinel.hk/api/v1/manifest): full machine-readable service manifest.
+- [POST /api/mcp](https://chainsentinel.hk/api/mcp): MCP-style JSON-RPC (`initialize`, `tools/list`, `tools/call`, `ping`). Tools: `check_address`, `get_balance`, `topup_info`.
+- [POST /api/check](https://chainsentinel.hk/api/check): legacy endpoint for human subscribers (`cs_live_*` tokens), unchanged.
+
+## Pricing
+
+- `$0.01` per successful paid check. `1 USDT ≈ 1 USD`, so a `$1` top-up ≈ 100 calls.
+- Free tier needs no payment. When you hit `402 PAYMENT_REQUIRED` or `429 RATE_LIMITED`, read the `payment` object in the response — it contains the address, network, minimum and exact steps.
+- Payment is non-custodial TRON USDT (TRC20) to the operator wallet. No card form, no KYC, no private key held by this service. This is an x402-inspired prepaid flow, not an official x402 facilitator integration.
+
+## Autonomy notes for agents
+
+1. Start with the free tier; no registration step exists and none is needed.
+2. Send `X-Request-Id` on paid calls to make billing idempotent — replaying the same id never debits twice.
+3. On `PAYMENT_REQUIRED`: call `topup_info` (or GET /api/v1/topup), transfer >= 1 USDT, POST the txId to /api/v1/topup, store the returned credential, then retry with `Authorization: Bearer <credential>`.
+4. Every response carries `meta.docs`; every error carries `error.code` and `error.hint`.
+5. All responses are `application/json`, CORS `*`, no cookies, no sessions, no redirects.
+
+## Discovery & docs
+
+- [Full documentation (llms-full.txt)](https://chainsentinel.hk/llms-full.txt)
+- [OpenAPI 3.1 spec](https://chainsentinel.hk/api/openapi.json)
+- [Agent card](https://chainsentinel.hk/.well-known/agent-card.json)
+- [Agent integration page](https://chainsentinel.hk/agent)
+- [Machine manifest](https://chainsentinel.hk/api/v1/manifest)
+
+## Scope & compliance
+
+Read-only risk screening. Supports TRON (T...), BTC (1/3/bc1...) and ETH (0x...) address formats. No trading execution, no custody, no private keys, no sanctions-evasion assistance. Results are risk signals, not legal advice.

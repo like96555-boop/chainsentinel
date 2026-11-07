@@ -28,7 +28,7 @@ export function setUsdtConfig(address: string): void {
 }
 
 /** TronGrid 查某地址的 TRC20 USDT 入账（最近 50 笔，含未确认） */
-async function fetchUsdtTransfers(address: string): Promise<Array<{ txId: string; from: string; to: string; value: number; confirmed: boolean }>> {
+export async function fetchUsdtTransfers(address: string): Promise<Array<{ txId: string; from: string; to: string; value: number; confirmed: boolean }>> {
   const url = `https://api.trongrid.io/v1/accounts/${address}/transactions/trc20?limit=50&only_confirmed=false&contract_address=${USDT_CONTRACT}`;
   const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
   if (!res.ok) throw new Error(`TronGrid 查询失败 HTTP ${res.status}`);

@@ -85,6 +85,49 @@ curl -X POST http://localhost:3000/api/check \
 
 Live demo: **<https://chainsentinel.hk>** (public address checker, no sign-up).
 
+---
+
+## ✦ Agent API（让 AI Agent 直接调用）
+
+零注册、零信用卡。免费层 30 次/分钟/IP；高频调用按需预付，`$0.01` / 次（1 USDT ≈ 100 次，TRON TRC20 非托管收款）。
+
+```bash
+# 1) 免费层：直接调用，无需任何凭证
+curl -X POST https://chainsentinel.hk/api/v1/check \
+  -H 'Content-Type: application/json' \
+  -d '{"address":"TNiq9AXBp9EjUqhDhrwrfvAA8U3GUQZH81"}'
+# → {"chain":"tron","level":"red",...,"meta":{"tier":"free","billedUsd":0,"docs":"..."}}
+
+# 2) 需要更高频率：读支付信息 → 转 >=1 USDT → 用 txId 换凭证
+curl https://chainsentinel.hk/api/v1/topup            # GET 返回支付地址与 steps[]
+curl -X POST https://chainsentinel.hk/api/v1/topup \
+  -H 'Content-Type: application/json' -d '{"txId":"<64-hex-tron-tx-hash>"}'
+# → {"credential":"cs_agent_...","balanceUsd":1,"estimatedCalls":100}
+
+# 3) 带凭证调用；X-Request-Id 保证扣费幂等
+curl -X POST https://chainsentinel.hk/api/v1/check \
+  -H 'Authorization: Bearer cs_agent_...' -H 'X-Request-Id: my-id-001' \
+  -H 'Content-Type: application/json' -d '{"address":"TNiq9..."}'
+curl https://chainsentinel.hk/api/v1/balance -H 'Authorization: Bearer cs_agent_...'
+
+# 4) MCP 风格 JSON-RPC（无需安装包）
+curl -X POST https://chainsentinel.hk/api/mcp \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+**给 Agent / 爬虫的发现入口**：`/llms.txt`、`/llms-full.txt`、`/api/v1/manifest`、`/api/openapi.json`、`/.well-known/agent-card.json`、`/agent`（含 JSON-LD 结构化数据）。`robots.txt` 已显式放行这些路径与主流 AI 爬虫。
+
+**机器可读错误**：所有错误都是 `{ok:false,error:{code,message,hint}}`；402 / 429 响应附带 `payment` 对象（地址、网络、最低充值、可执行 steps），Agent 可自行恢复，无需读人类文档。
+
+**幂等与安全**：同一 `txId` 只入账一次；带 `X-Request-Id` 的付费调用重复请求不会重复扣费；账本 `data/agent-credits.json` 原子落盘。服务不持有私钥、不托管资金、不执行交易。这是 x402 风格的预付流程，并非官方 x402 facilitator 集成。
+
+**桌面 MCP 客户端**：`node mcp/stdio-bridge.mjs`（零依赖），配置示例见 `mcp/README.md`。
+
+**回归测试**：`npm run test:agent`。付费层用例需要以 `AGENT_API_TEST=1 npm run dev` 启动本地服务并运行 `AGENT_TOPUP_TEST=1 node scripts/agent-api-test.mjs`；合成交易仅在非 production 环境生效。
+
+---
+
 ## ✦ Open Source vs SaaS
 
 | | Community (this repo) | Pro (SaaS) | Business (SaaS) |
