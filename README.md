@@ -121,7 +121,11 @@ curl -X POST https://chainsentinel.hk/api/mcp \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
-**给 Agent / 爬虫的发现入口**：`/llms.txt`、`/llms-full.txt`、`/api/v1/manifest`、`/api/openapi.json`、`/.well-known/agent-card.json`、`/agent`（含 JSON-LD 结构化数据）。`robots.txt` 已显式放行这些路径与主流 AI 爬虫。
+**给 Agent / 爬虫的发现入口**：`/llms.txt`、`/llms-full.txt`、`/api/v1/manifest`、`/api/openapi.json`、`/.well-known/agent-card.json`、`/agent` 与英文版 `/en/agent`（含 SoftwareApplication + FAQPage 结构化数据、hreflang 中英互指）。`robots.txt` 显式放行这些路径与主流 AI 爬虫，`sitemap.xml` 收录两个落地页。全站导航与页脚都有指向 Agent 页和 `llms.txt` 的内链，每个页面的 `<head>` 也声明了 `llms.txt` alternate——避免 Agent 页成为只在 sitemap 里存在的孤儿页。
+
+**发现层契约测试**：`npm run test:seo`（也已接入 `npm test`），校验端点状态 / MIME、站内可达性、canonical 与 hreflang、JSON-LD 合法性、robots 与 sitemap 一致性、文档无夸大措辞、以及文档里的 curl 示例真的能跑通。
+
+**站外分发（尚未执行）**：`mcp/package.json` 已把 stdio 桥备成可 `npx -y chainsentinel-agent-mcp` 安装的包，但**尚未发布到 npm**，也没有提交 MCP Registry / Search Console。发布清单见 `mcp/README.md`。注意不要为了进目录添加 `/.well-known/x402.json`——本端点不是官方 x402。
 
 **机器可读错误**：所有错误都是 `{ok:false,error:{code,message,hint}}`；402 / 429 响应附带 `payment` 对象（地址、网络、最低充值、可执行 steps），Agent 可自行恢复，无需读人类文档。
 

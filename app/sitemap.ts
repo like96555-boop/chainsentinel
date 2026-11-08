@@ -9,6 +9,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: base, lastModified: now, changeFrequency: 'daily', priority: 1 },
     { url: `${base}/en`, lastModified: now, changeFrequency: 'daily', priority: 1 },
     { url: `${base}/agent`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${base}/en/agent`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
     { url: `${base}/en/blog`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${base}/en/blog/how-to-check-if-usdt-address-is-blacklisted`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${base}/en/blog/ofac-sdn-crypto-address-screening-api`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },

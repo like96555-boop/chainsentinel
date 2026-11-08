@@ -14,11 +14,13 @@ export default function NavBar() {
     { href: '/alerts', label: '风险警示榜' },
     { href: '/smart-money', label: '聪明钱追踪' },
     { href: '/tax', label: '税务中心' },
+    { href: '/agent', label: 'Agent API' },
     { href: '/dashboard', label: '订阅中心' },
   ];
   const en = [
     { href: '/en', label: 'Home' },
     { href: '/en/blog', label: 'Blog' },
+    { href: '/en/agent', label: 'Agent API' },
     { href: '/dashboard', label: 'Plans' },
   ];
   const links = isEn ? en : zh;

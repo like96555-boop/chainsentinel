@@ -3,7 +3,10 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Agent API — 让 AI 在交互前先过一道免费否决门',
   description: 'ChainSentinel Agent API：零注册筛查 TRON/BTC/ETH 地址是否命中 OFAC SDN 等名单，明确返回「查了什么、没查什么」与建议动作。面向 AI Agent 的 REST + MCP 风格工具端点。No signup, explicit coverage, machine-readable errors.',
-  alternates: { canonical: '/agent' },
+  alternates: {
+    canonical: '/agent',
+    languages: { 'zh-CN': '/agent', en: '/en/agent', 'x-default': '/en/agent' },
+  },
   openGraph: {
     title: 'ChainSentinel Agent API — Free pre-interaction veto gate for AI agents',
     description: 'No signup. OFAC SDN address screening with explicit coverage. green is not a clearance. llms.txt, OpenAPI, agent card and MCP-style tools endpoint.',
@@ -60,7 +63,9 @@ export default function AgentPage() {
     <main className="mx-auto max-w-4xl px-6 py-14 text-slate-200">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      <p className="text-xs tracking-[0.3em] text-neon-cyan">FOR AUTONOMOUS AGENTS</p>
+      <p className="text-xs tracking-[0.3em] text-neon-cyan">
+        FOR AUTONOMOUS AGENTS · <a href="/en/agent" className="text-slate-400 hover:text-neon-cyan">English version →</a>
+      </p>
       <h1 className="mt-3 text-4xl font-bold text-white">交互前，先让 Agent 查一次</h1>
       <p className="mt-5 text-lg leading-relaxed text-slate-300">
         一道免费、零注册的否决门：无需 API key、无需信用卡，检查地址是否命中 OFAC SDN 等名单，并明确告诉 Agent「我们查了什么、没查什么、下一步该怎么做」。需要更高频率时，用一笔 TRON USDT 换取预付额度，Agent 自己就能完成「发现 → 付费 → 调用 → 查余额」的闭环。

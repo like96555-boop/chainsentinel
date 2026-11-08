@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import ChatWidget from '@/components/ChatWidget';
 import NavBar from '@/components/NavBar';
+import SiteFooter from '@/components/SiteFooter';
 import { AnnouncementBar } from '@/components/BannerCarousel';
 
 export const metadata: Metadata = {
@@ -26,14 +27,14 @@ export const metadata: Metadata = {
     alternateLocale: 'en_US',
     url: 'https://chainsentinel.hk',
     siteName: 'ChainSentinel',
-    title: '链哨 ChainSentinel — 3 秒识别黑钱地址',
-    description: 'TRON/BTC/ETH 多链地址风险筛查 API：黑名单命中、OFAC SDN 制裁地址、混币/诈骗归集资金识别。商户收款前拦截脏 U，守住账户安全。',
+    title: '链哨 ChainSentinel — OFAC SDN 地址筛查 / Agent 交互前否决门',
+    description: 'TRON/BTC/ETH 地址筛查：906 条 OFAC SDN 制裁地址 + 2 条公开记录，返回明确的 coverage（查了什么、没查什么）。零注册，Agent 可直接调用。未命中不等于清白。',
     images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'ChainSentinel — Crypto AML & On-chain Risk Screening' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ChainSentinel — Crypto AML & On-chain Risk Screening',
-    description: 'Check crypto addresses against OFAC SDN & threat intel before you receive funds. TRON/BTC/ETH, 3-second verdict.',
+    title: 'ChainSentinel — Free OFAC SDN address screening for AI agents',
+    description: 'Zero-signup first-pass veto gate for TRON/BTC/ETH addresses. Explicit coverage says what was checked and what was not. A non-match is not a clearance.',
     images: ['/og-image.png'],
   },
   alternates: {
@@ -68,7 +69,7 @@ const JSON_LD = {
       operatingSystem: 'Web',
       url: 'https://chainsentinel.hk',
       description:
-        'Multi-chain (TRON/BTC/ETH) crypto address risk screening: blacklist hits, OFAC SDN sanctions, money-laundering & scam fund detection. Free public address check + API for merchants.',
+        'Free first-pass address screening for TRON / BTC / ETH against the OFAC SDN list (906 addresses) plus 2 public records, with explicit coverage of what was not checked. No entity attribution, no multi-hop tracing, no KYT report. Zero-signup API for AI agents.',
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
       inLanguage: ['zh-CN', 'en'],
     },
@@ -79,6 +80,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="zh-CN">
       <head>
+        {/* Agent 发现入口：访问任意页面都能从 <head> 找到机器可读文档 */}
+        <link rel="alternate" type="text/plain" href="/llms.txt" title="llms.txt — LLM entry point" />
+        <link rel="alternate" type="text/plain" href="/llms-full.txt" title="llms-full.txt — full agent docs" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
@@ -88,6 +92,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AnnouncementBar />
         <NavBar />
         {children}
+        <SiteFooter />
         <ChatWidget />
       </body>
     </html>

@@ -18,7 +18,15 @@ export default function BlogIndexPage() {
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-slate-400">
           Real-world guides on screening USDT payments, OFAC sanctions compliance, and on-chain risk analysis.
-          Written from what we actually run — 900+ OFAC SDN addresses, TRON/BTC/ETH engines, live in production.
+          Written from what we actually run — 906 OFAC SDN addresses plus 2 public records, TRON/BTC/ETH engines,
+          live in production. No entity attribution or multi-hop tracing; a non-match is not a clearance.
+        </p>
+        <p className="mt-3 text-sm leading-relaxed text-slate-400">
+          Building an autonomous agent? See the{' '}
+          <Link href="/en/agent" className="font-semibold text-neon-cyan hover:underline">
+            free no-signup OFAC SDN screening API →
+          </Link>{' '}
+          或查阅 <Link href="/llms.txt" className="font-mono text-neon-cyan hover:underline">llms.txt</Link>.
         </p>
         <div className="mt-10 space-y-6">
           {BLOG_POSTS.map((p) => (

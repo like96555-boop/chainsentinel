@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'ChainSentinel — Crypto AML & On-chain Risk Screening API (TRON/BTC/ETH)',
   description:
-    'Check crypto addresses against OFAC SDN sanctions, blacklists and laundering/scam funds before you receive payments. Multi-chain (TRON/BTC/ETH) risk screening API with 3-second verdicts, address monitoring and webhook alerts for merchants and institutions.',
+    'Free OFAC SDN sanctions address screening for TRON / BTC / ETH, plus a zero-signup API built for AI agents. We check 906 OFAC SDN addresses and 2 public records and report exactly what we did not check. No entity attribution, no multi-hop tracing — a non-match is not proof of clean funds, and green is not a clearance.',
   alternates: {
     canonical: '/en',
     languages: { 'zh-CN': '/', en: '/en' },
@@ -13,15 +13,15 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://chainsentinel.hk/en',
     siteName: 'ChainSentinel',
-    title: 'ChainSentinel — Detect dirty-money addresses in 3 seconds',
+    title: 'ChainSentinel — Free OFAC SDN address screening for AI agents',
     description:
-      'Free crypto address risk check: OFAC SDN, blacklists, money-laundering & scam fund detection. TRON/BTC/ETH, 3-second verdict.',
+      'Zero-signup first-pass veto gate for TRON/BTC/ETH. 906 OFAC SDN addresses + 2 public records, with explicit coverage of what was not checked.',
     images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'ChainSentinel — Crypto AML & On-chain Risk Screening' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ChainSentinel — Detect dirty-money addresses in 3 seconds',
-    description: 'Check crypto addresses against OFAC SDN & threat intel before you receive funds. TRON/BTC/ETH.',
+    title: 'ChainSentinel — Free OFAC SDN address screening for AI agents',
+    description: 'Zero-signup OFAC SDN address check for TRON/BTC/ETH with explicit coverage. A non-match is not a clearance.',
     images: ['/og-image.png'],
   },
 };

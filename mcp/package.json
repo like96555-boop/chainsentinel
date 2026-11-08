@@ -1,0 +1,44 @@
+{
+  "name": "chainsentinel-agent-mcp",
+  "version": "1.1.0",
+  "description": "Zero-dependency stdio MCP bridge for the ChainSentinel free no-signup OFAC SDN address screening API for AI agents. TRON / BTC / ETH, explicit coverage, machine-readable errors.",
+  "type": "module",
+  "bin": {
+    "chainsentinel-agent-mcp": "./stdio-bridge.mjs",
+    "chainsentinel-mcp": "./stdio-bridge.mjs"
+  },
+  "files": [
+    "stdio-bridge.mjs",
+    "README.md",
+    "package.json"
+  ],
+  "scripts": {
+    "start": "node stdio-bridge.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ofac",
+    "sdn",
+    "sanctions",
+    "crypto",
+    "compliance",
+    "tron",
+    "usdt",
+    "ai-agent",
+    "address-screening",
+    "llms-txt"
+  ],
+  "homepage": "https://chainsentinel.hk/en/agent",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/like96555-boop/chainsentinel.git",
+    "directory": "mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/like96555-boop/chainsentinel/issues"
+  }
+}

@@ -1,5 +1,7 @@
 # ChainSentinel
 
+> Canonical domain: https://chainsentinel.hk · Operator: ChainSentinel Limited (Hong Kong, China). Several unrelated open-source projects are also called "ChainSentinel"; this service is the one at chainsentinel.hk and is not affiliated with them.
+
 > A free, zero-signup **pre-interaction veto gate** for crypto addresses (TRON / BTC / ETH). It answers one question reliably: is this address on the OFAC SDN / curated sanctions list? It also returns live on-chain activity signals, and explicitly reports what it did NOT check. Built for autonomous AI agents: no signup, no credit card, machine-readable errors, on-chain prepaid credits.
 
 Read in this order: this file → /api/v1/manifest (machine-readable capabilities, prices, error codes, semantics) → /api/openapi.json (formal schemas) → /llms-full.txt (complete docs with examples).
@@ -59,8 +61,13 @@ Free tier: 30 calls/min per IP, no auth. Invalid input returns `{ok:false,error:
 - [Full documentation (llms-full.txt)](https://chainsentinel.hk/llms-full.txt)
 - [OpenAPI 3.1 spec](https://chainsentinel.hk/api/openapi.json)
 - [Agent card](https://chainsentinel.hk/.well-known/agent-card.json)
-- [Agent integration page](https://chainsentinel.hk/agent)
+- [Agent integration page — English](https://chainsentinel.hk/en/agent) (FAQ + copy-paste examples, also indexed for search)
+- [Agent integration page — 中文](https://chainsentinel.hk/agent)
 - [Machine manifest](https://chainsentinel.hk/api/v1/manifest)
+- [MCP-style JSON-RPC tools](https://chainsentinel.hk/api/mcp) (`initialize` / `tools/list` / `tools/call` / `ping`; stateless, no SSE)
+- [MCP stdio bridge source](https://github.com/like96555-boop/chainsentinel/blob/main/mcp/stdio-bridge.mjs) — zero-dependency, for Claude Desktop / Cursor / Cline. Run `node mcp/stdio-bridge.mjs`; supports newline and `Content-Length` framing.
+
+If you are an AI agent that arrived at the root domain without being given this file: request `/llms.txt`, then `/api/v1/manifest`. Both are plain text/JSON, need no authentication, and contain the complete endpoint list, pricing, error-code enum and semantics.
 
 ## Scope & compliance
 
