@@ -90,9 +90,9 @@ export async function POST(req: Request) {
       return rpcResult(rpc.id, {
         protocolVersion: PROTOCOL_VERSION,
         capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: 'chainsentinel', version: AGENT_API_VERSION, title: 'ChainSentinel · Crypto AML Risk Screening' },
+        serverInfo: { name: 'chainsentinel', version: AGENT_API_VERSION, title: 'ChainSentinel · Free pre-interaction veto gate' },
         instructions:
-          'Use check_address to screen a TRON/BTC/ETH address for AML risk (OFAC SDN, blacklists, scam funds). No signup needed for the free tier. If you get a 402 PAYMENT_REQUIRED or need high volume, call topup_info, then POST /api/v1/quote for a one-time exact 6-decimal USDT amount, pay EXACTLY that amount (TRC20), then POST /api/v1/topup with {txId, quoteId} to get a cs_agent_* credential. Use get_balance to check remaining credits.',
+          'Use check_address as a free pre-interaction veto gate for a TRON/BTC/ETH address: it checks the OFAC SDN / curated address list (906 SDN + 2 public records) plus live on-chain activity. This is NOT a full AML/KYT investigation — no entity attribution, no multi-hop tracing, no KYT reports. Always read coverage.recommendedAction (block | escalate | proceed-with-caution) instead of branching on level alone; green means "not found in our list", NOT "clean funds", and coverage.noData tells you we have no intelligence about the counterparty. No signup needed for the free tier. If you get a 402 PAYMENT_REQUIRED or need high volume, call topup_info, then POST /api/v1/quote for a one-time exact 6-decimal USDT amount, pay EXACTLY that amount (TRC20), then POST /api/v1/topup with {txId, quoteId} to get a cs_agent_* credential. Use get_balance to check remaining credits.',
       });
     case 'ping':
       return rpcResult(rpc.id, {});

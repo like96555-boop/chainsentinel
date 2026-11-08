@@ -5,19 +5,39 @@ Machine manifest: /api/v1/manifest. Formal schemas: /api/openapi.json.
 
 ## 1. What the service does
 
-Given one crypto address, ChainSentinel returns a risk verdict in about 3 seconds:
+ChainSentinel is a **free, zero-signup pre-interaction veto gate**, not a full AML/KYT investigation. Given one crypto address it returns a verdict in about 3 seconds:
 
 - `chain`: tron | btc | eth (auto-detected from the address format)
 - `level`: red | yellow | green
-- `score`: 0-100 (lower = riskier; a red blacklist hit returns 5)
+- `score`: 0-100 (lower = riskier; a curated-list hit returns 5)
 - `reasons`: human- and machine-readable explanation array
 - `evidenceLinks`: block explorer links for manual verification
 - `blacklist`: label/source/sourceLabel when a curated label matched
-- `stats`: on-chain account stats when available (TRON)
+- `stats`: on-chain account stats when available
 - `upstreamReachable`: whether the live chain data source responded
+- `coverage`: what was checked, what was NOT checked, and what to do next (see below)
 - `meta`: requestId, tier, billedUsd, balanceUsd, freeCallsRemainingPerMinute, docs, openapi
 
-Data sources: OFAC SDN sanctions list, 900+ curated blacklist labels (hacks, scams, laundering clusters), plus live TRON/BTC/ETH heuristics. A local blacklist hit short-circuits to `red` without needing an upstream call.
+**Real data sources:** the library contains **908 entries — 906 OFAC SDN addresses + 2 public records** (Ronin Bridge exploit, Silk Road seizure). Distribution: BTC 528 / TRON 276 / ETH 104. There is no multi-source threat-intelligence feed. Non-hit verdicts are computed from live on-chain activity heuristics (TronGrid for TRON, Blockstream for BTC, public RPC for ETH). A curated-list hit short-circuits to `red` without querying an upstream.
+
+### 1.1 Coverage — read this before acting
+
+Every response carries `coverage`:
+
+| field | meaning |
+|---|---|
+| `verdictBasis` | `sanctions-list-hit` \| `chain-activity-heuristics` \| `degraded-upstream` |
+| `checksPerformed[]` | e.g. `ofac-sdn-address-list`, `public-record`, `tron-onchain-activity` |
+| `notCovered[]` | entity attribution, multi-hop/cross-chain tracing, KYT reports, address-less sanction lists, court-admissible evidence |
+| `noData` | `true` whenever the verdict is not a list hit — we have no intelligence about the counterparty's identity |
+| `degraded` | `true` when the chain data source failed; the verdict is a fallback, not a screening result |
+| `upstreamQueried` | `false` on a list hit (no upstream call was made) |
+| `greenIsNotClearance` | always `true` |
+| `recommendedAction` | `block` \| `escalate` \| `proceed-with-caution` — **branch on this, not on `level` alone** |
+| `interpretation` | one sentence explaining what this verdict actually means |
+| `escalationHint` | when and why to escalate to a full KYT / forensics provider |
+
+**`green` means "not found in our list and normal on-chain activity", never "clean funds".** An address absent from OFAC SDN can still be a drainer, a mixer, or a fresh scam wallet — we simply have no data about it. Absence of a listing is not a clearance.
 
 ## 2. Free tier — zero setup
 
@@ -42,9 +62,22 @@ Example response (abbreviated):
   "reasons": ["命中本地风险标签库：OFAC SDN 制裁（TRX）", "..."],
   "evidenceLinks": ["https://tronscan.org/#/address/TNiq..."],
   "blacklist": { "label": "OFAC SDN 制裁（TRX）", "source": "ofac-sdn", "sourceLabel": "美国财政部 OFAC 制裁名单（官方公开数据）" },
+  "coverage": {
+    "verdictBasis": "sanctions-list-hit",
+    "checksPerformed": ["ofac-sdn-address-list", "public-record"],
+    "notCovered": ["entity-attribution", "multi-hop-tracing", "kyt-report"],
+    "noData": false,
+    "degraded": false,
+    "upstreamQueried": false,
+    "greenIsNotClearance": true,
+    "recommendedAction": "block",
+    "interpretation": "The address matched a curated sanctions/blacklist entry. Stop the interaction."
+  },
   "meta": { "ok": true, "requestId": "req_...", "tier": "free", "billedUsd": 0, "pricePerCallUsd": 0, "docs": "https://chainsentinel.hk/llms.txt" }
 }
 ```
+
+For a non-hit address, `verdictBasis` becomes `chain-activity-heuristics`, `noData` is `true`, and `recommendedAction` is `escalate` (yellow) or `proceed-with-caution` (green). Never read that as an approval.
 
 ## 3. Prepaid tier — for high volume / long-running agents
 
@@ -108,14 +141,14 @@ curl -X POST https://chainsentinel.hk/api/v1/check \
 ```
 
 Tools:
-- `check_address` — args: `address` (required), `credential` (optional `cs_agent_*`). Free tier when omitted.
+- `check_address` — args: `address` (required), `credential` (optional `cs_agent_*`). Free tier when omitted. Returns the verdict plus `coverage`; always branch on `coverage.recommendedAction`.
 - `get_balance` — args: `credential` (required).
 - `topup_info` — no args; returns address, price, minimum and exact steps.
 
 `tools/call` returns MCP-compatible `content[].text` (JSON string), `structuredContent`, and `isError`.
 `ping` returns `{}`. Notification methods (no id) get HTTP 202 with no body.
 
-Honest scope note: this is a lightweight JSON-RPC tools endpoint, not a full stateful MCP session server (no sessions, no SSE streams, no resources/prompts). A zero-dependency stdio bridge for desktop MCP clients ships in `mcp/stdio-bridge.mjs` in the source repo.
+Honest scope notes: this is a lightweight JSON-RPC tools endpoint, not a full stateful MCP session server (no sessions, no SSE streams, no resources/prompts). A zero-dependency stdio bridge for desktop MCP clients ships in `mcp/stdio-bridge.mjs` in the source repo. The payment flow is **not** official x402 — standard x402 clients (CDP SDK / x402-fetch / Coinbase payment MCP) cannot pay this endpoint; use the quote → transfer → claim flow in section 3.
 
 ## 5. Error contract
 
@@ -151,7 +184,8 @@ Every error: `{ "ok": false, "error": { "code": "...", "message": "...", "hint":
 - `POST /api/v1/check` with `X-Request-Id`: idempotent debit.
 - Ledger: `data/agent-credits.json`, atomic writes, in-process serialization of concurrent credits/debits.
 - The service never holds a private key and never moves funds. Payments go directly to the operator's self-custodied TRON wallet; the server only reads public chain data via TronGrid.
-- Read-only screening. No trading execution, no custody, no sanctions-evasion assistance. Risk signals, not legal advice.
+- Read-only, best-effort screening. No entity attribution, no multi-hop tracing, no KYT reports, no court-admissible evidence. No trading execution, no custody, no sanctions-evasion assistance. Risk signals, not legal advice or a compliance clearance.
+- Every verdict carries `coverage` so an agent can tell the difference between "we found a sanctions hit" and "we have no data about this address".
 
 ## 8. Legacy human API (unchanged)
 

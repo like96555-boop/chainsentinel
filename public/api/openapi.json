@@ -2,9 +2,9 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ChainSentinel Agent API",
-    "version": "1.0.0",
-    "summary": "Crypto AML / on-chain risk screening for autonomous AI agents",
-    "description": "Screen TRON, BTC and ETH addresses against OFAC SDN sanctions, 900+ blacklist labels and live chain heuristics. No signup for the free tier. Prepaid credits via TRON USDT (TRC20), $0.01 per paid check. Full docs: https://chainsentinel.hk/llms-full.txt",
+    "version": "1.1.0",
+    "summary": "Free pre-interaction veto gate for crypto addresses, built for autonomous AI agents",
+    "description": "Checks TRON / BTC / ETH addresses against the OFAC SDN sanctioned-address list (906 entries) plus 2 public records, and reports live on-chain activity. This is NOT a full AML/KYT investigation: no entity attribution, no multi-hop tracing, no KYT reports. Every response carries a coverage object stating what was checked, what was not, and a recommendedAction. green is never a clearance. No signup for the free tier. Prepaid credits via TRON USDT (TRC20), $0.01 per paid check; this is an x402-inspired prepaid flow, not an official x402 integration. Full docs: https://chainsentinel.hk/llms-full.txt",
     "contact": { "name": "ChainSentinel", "url": "https://chainsentinel.hk/agent" },
     "license": { "name": "MIT", "identifier": "MIT" }
   },
@@ -47,8 +47,8 @@
       },
       "post": {
         "operationId": "checkAddress",
-        "summary": "Screen one crypto address for AML risk",
-        "description": "Free tier needs no credentials (30/min per IP). With a cs_agent_* Bearer credential each successful call costs 0.01 USD. Send X-Request-Id to make billing idempotent.",
+        "summary": "Pre-interaction veto check for one crypto address",
+        "description": "Checks the OFAC SDN / curated address list plus live on-chain activity. Always read coverage.recommendedAction (block | escalate | proceed-with-caution) instead of branching on level alone; green means 'not found in our list', NOT 'clean funds'. Free tier needs no credentials (30/min per IP). With a cs_agent_* Bearer credential each successful call costs 0.01 USD. Send X-Request-Id to make billing idempotent.",
         "tags": ["screening"],
         "security": [{}, { "agentBearer": [] }],
         "parameters": [
@@ -157,17 +157,36 @@
       },
       "CheckResponse": {
         "type": "object",
-        "required": ["chain", "level", "score", "reasons", "meta"],
+        "required": ["chain", "level", "score", "reasons", "coverage", "meta"],
         "properties": {
           "chain": { "type": "string", "enum": ["tron", "btc", "eth"] },
-          "level": { "type": "string", "enum": ["red", "yellow", "green"], "description": "red = stop all dealings; lower score = riskier" },
+          "level": { "type": "string", "enum": ["red", "yellow", "green"], "description": "red = curated list hit, stop the interaction. green is NOT a clearance — see coverage.greenIsNotClearance and coverage.recommendedAction." },
           "score": { "type": "number", "minimum": 0, "maximum": 100 },
           "reasons": { "type": "array", "items": { "type": "string" } },
           "evidenceLinks": { "type": "array", "items": { "type": "string", "format": "uri" } },
           "blacklist": { "type": ["object", "null"], "properties": { "label": { "type": "string" }, "source": { "type": "string" }, "sourceLabel": { "type": "string" } } },
           "stats": { "type": ["object", "null"] },
           "upstreamReachable": { "type": "boolean" },
+          "coverage": { "$ref": "#/components/schemas/ScreeningCoverage" },
           "meta": { "type": "object", "properties": { "ok": { "type": "boolean" }, "requestId": { "type": "string" }, "tier": { "type": "string", "enum": ["free", "prepaid"] }, "billedUsd": { "type": "number" }, "pricePerCallUsd": { "type": "number" }, "balanceUsd": { "type": "number" }, "freeCallsRemainingPerMinute": { "type": ["integer", "null"] }, "docs": { "type": "string" } } }
+        }
+      },
+      "ScreeningCoverage": {
+        "type": "object",
+        "required": ["verdictBasis", "checksPerformed", "notCovered", "noData", "degraded", "greenIsNotClearance", "recommendedAction", "interpretation"],
+        "description": "Explicit statement of what was checked, what was NOT checked, and what the agent should do next. Branch on recommendedAction, not on level alone.",
+        "properties": {
+          "scope": { "type": "string" },
+          "verdictBasis": { "type": "string", "enum": ["sanctions-list-hit", "chain-activity-heuristics", "degraded-upstream"] },
+          "checksPerformed": { "type": "array", "items": { "type": "string" } },
+          "notCovered": { "type": "array", "items": { "type": "string" }, "description": "No entity attribution, no multi-hop/cross-chain tracing, no KYT reports, no court-admissible evidence." },
+          "noData": { "type": "boolean", "description": "True whenever the verdict is not a curated-list hit: we have no intelligence about this counterparty." },
+          "degraded": { "type": "boolean", "description": "True when the live chain data source failed; the verdict is a fallback, retry or escalate." },
+          "upstreamQueried": { "type": "boolean", "description": "False on a curated-list hit (short-circuit, no upstream call)." },
+          "greenIsNotClearance": { "type": "boolean", "const": true, "description": "Always true. Absence of a listing is not evidence of clean funds." },
+          "recommendedAction": { "type": "string", "enum": ["block", "escalate", "proceed-with-caution"], "description": "red -> block; yellow/degraded -> escalate; green -> proceed-with-caution. Never an unconditional approval." },
+          "interpretation": { "type": "string" },
+          "escalationHint": { "type": "string" }
         }
       },
       "TopupRequest": {

@@ -49,6 +49,9 @@ async function main() {
   ok('robots 放行 /llms.txt 与 /api/v1/', robots.text.includes('/llms.txt') && robots.text.includes('/api/v1/'));
   const manifest = await call('/api/v1/manifest');
   ok('manifest 含定价与错误码', manifest.json?.pricing?.pricePerCallUsd === 0.01 && Array.isArray(manifest.json?.errorCodes));
+  ok('manifest 声明 coverage 语义与真实数据构成', manifest.json?.semantics?.greenIsNotClearance === true && manifest.json?.dataSources?.composition?.['ofac-sdn'] === 906);
+  ok('llms.txt 明确 green 不是清白证明', llms.text.includes('NOT a clearance') && llms.text.includes('906 OFAC SDN'));
+  ok('OpenAPI 声明 ScreeningCoverage 且响应必含 coverage', Boolean(openapi.json?.components?.schemas?.ScreeningCoverage) && openapi.json?.components?.schemas?.CheckResponse?.required?.includes('coverage'));
 
   // 2. 免费层：零配置直接可用
   const getDoc = await call('/api/v1/check');
@@ -57,6 +60,21 @@ async function main() {
   ok('免费层免鉴权调用成功', free.status === 200 && free.json?.meta?.tier === 'free' && free.json?.meta?.billedUsd === 0);
   ok('判定结果正确（OFAC red）', free.json?.level === 'red' && free.json?.blacklist?.source === 'ofac-sdn');
   ok('响应带幂等/限流头', Boolean(free.headers.get('x-request-id')) && free.headers.get('x-ratelimit-remaining') !== null);
+
+  // 2.1 coverage 语义：Agent 必须能区分「命中名单」与「我们对这个地址没有情报」
+  const cov = free.json?.coverage;
+  ok('命中响应判定依据为名单命中且 noData=false', cov?.verdictBasis === 'sanctions-list-hit' && cov?.noData === false);
+  ok('命中响应建议 block 且声明未查询上游', cov?.recommendedAction === 'block' && cov?.upstreamQueried === false);
+  ok('coverage 明确 green 不是清白证明', cov?.greenIsNotClearance === true && typeof cov?.interpretation === 'string');
+  ok('coverage 列出未覆盖范围与已执行检查', Array.isArray(cov?.notCovered) && cov.notCovered.length >= 4 && Array.isArray(cov?.checksPerformed));
+
+  const clean = await post('/api/v1/check', { address: 'TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYnou' });
+  const ccov = clean.json?.coverage;
+  ok('未命中响应明确 noData=true', clean.status === 200 && ccov?.noData === true && ['chain-activity-heuristics', 'degraded-upstream'].includes(ccov?.verdictBasis));
+  ok('未命中不会给出 block 建议', ccov?.recommendedAction === 'escalate' || ccov?.recommendedAction === 'proceed-with-caution');
+  ok('未命中响应列出链上检查项', Array.isArray(ccov?.checksPerformed) && ccov.checksPerformed.some((x) => String(x).includes('onchain-activity')));
+  ok('coverage.degraded 与 upstreamReachable 一致', ccov?.degraded === (clean.json?.upstreamReachable === false));
+
   const bad1 = await post('/api/v1/check', { address: '' });
   ok('空地址 → INVALID_ADDRESS 400', bad1.status === 400 && bad1.json?.error?.code === 'INVALID_ADDRESS' && Boolean(bad1.json?.error?.hint));
   const bad2 = await post('/api/v1/check', { address: 'not-an-address' });
@@ -75,6 +93,8 @@ async function main() {
   const mcpCall = await post('/api/mcp', { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'check_address', arguments: { address: RISKY } } });
   const inner = JSON.parse(mcpCall.json?.result?.content?.[0]?.text || '{}');
   ok('MCP check_address 免费层可用', mcpCall.json?.result?.isError === false && inner.level === 'red');
+  ok('MCP check_address 同样返回 coverage 语义', inner.coverage?.verdictBasis === 'sanctions-list-hit' && inner.coverage?.recommendedAction === 'block');
+  ok('MCP 工具描述声明 green 不是清白证明', JSON.stringify(list.json?.result?.tools || []).includes('green is NOT a clearance') || JSON.stringify(list.json?.result?.tools || []).includes('NOT a clearance'));
   const mcpTopup = await post('/api/mcp', { jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'topup_info', arguments: {} } });
   ok('MCP topup_info 返回支付指引', JSON.stringify(mcpTopup.json?.result || {}).includes('minTopupUsdt'));
   const unknown = await post('/api/mcp', { jsonrpc: '2.0', id: 5, method: 'nope' });
@@ -132,6 +152,7 @@ async function main() {
   // 5. 旧接口无回归
   const legacy = await post('/api/check', { address: RISKY });
   ok('旧 /api/check 行为不变', legacy.status === 200 && legacy.json?.level === 'red' && legacy.json?.blacklist?.source === 'ofac-sdn');
+  ok('旧接口同样带 coverage（判定引擎不漂移）', legacy.json?.coverage?.verdictBasis === 'sanctions-list-hit' && legacy.json?.coverage?.greenIsNotClearance === true);
   const health = await call('/api/health');
   ok('health 正常', health.status === 200);
 

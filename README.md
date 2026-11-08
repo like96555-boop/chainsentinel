@@ -40,7 +40,7 @@ Multi-chain crypto address risk screening (TRON / BTC / ETH) · OFAC SDN sanctio
 | Module | Description |
 |---|---|
 | 🔍 **Multi-chain risk check** | TRON / BTC / ETH auto-detection; red/yellow/green verdict + risk score + reasons + evidence links |
-| 🚫 **OFAC SDN sanctions** | 900+ US Treasury SDN addresses built in (TRON 188 / BTC 524 / ETH 96), official public data, daily sync |
+| 🚫 **OFAC SDN sanctions** | 908 curated addresses built in: 906 US Treasury SDN + 2 public records (BTC 528 / TRON 276 / ETH 104), official public data, daily sync. This is an address list, not a multi-source threat-intel feed |
 | 📢 **On-chain risk alerts board** | Public threat intel: confirmed incidents (law-enforcement/security records) vs heuristic observations, source badges |
 | 💰 **Smart money tracker** | Real on-chain footprints of institutions & whales + watchlist K-lines (lightweight-charts) |
 | 🧮 **Hong Kong tax center** | FIFO / LIFO / HIFO cost-basis engine mapped to DIPN 59 / Cap.112, blacklist audit linkage |
@@ -89,6 +89,8 @@ Live demo: **<https://chainsentinel.hk>** (public address checker, no sign-up).
 
 ## ✦ Agent API（让 AI Agent 直接调用）
 
+**定位：Agent 交互前的第一道免费否决门，不是完整 AML/KYT 平台。** 标签库共 908 条（906 条 OFAC SDN 地址 + 2 条公开记录），加上 TRON/BTC/ETH 实时链上活跃度启发式。没有实体归因、没有多跳跨链追踪、不产出 KYT 报告或可提交监管的证据。每个响应都带 `coverage`，明确列出「查了什么 / 没查什么 / 建议动作」；**`green` 不是清白证明，请按 `coverage.recommendedAction`（block / escalate / proceed-with-caution）分支**。需要归因或资金追踪时，应升级到完整的 KYT / 取证服务。
+
 零注册、零信用卡。免费层 30 次/分钟/IP；高频调用按需预付，`$0.01` / 次（1 USDT ≈ 100 次，TRON TRC20 非托管收款）。
 
 ```bash
@@ -123,7 +125,7 @@ curl -X POST https://chainsentinel.hk/api/mcp \
 
 **机器可读错误**：所有错误都是 `{ok:false,error:{code,message,hint}}`；402 / 429 响应附带 `payment` 对象（地址、网络、最低充值、可执行 steps），Agent 可自行恢复，无需读人类文档。
 
-**幂等与安全**：同一 `txId` 只入账一次；带 `X-Request-Id` 的付费调用重复请求不会重复扣费；账本 `data/agent-credits.json` 原子落盘。收款地址是公开的，所以充值必须先取一次性报价（唯一 6 位小数金额），链上金额与报价不符即拒绝，防止他人冒领历史入账。服务不持有私钥、不托管资金、不执行交易。这是 x402 风格的预付流程，并非官方 x402 facilitator 集成。
+**幂等与安全**：同一 `txId` 只入账一次；带 `X-Request-Id` 的付费调用重复请求不会重复扣费；账本 `data/agent-credits.json` 原子落盘。收款地址是公开的，所以充值必须先取一次性报价（唯一 6 位小数金额），链上金额与报价不符即拒绝，防止他人冒领历史入账。服务不持有私钥、不托管资金、不执行交易。这是 x402 风格的预付流程，**并非官方 x402 集成**——标准 x402 客户端（CDP SDK / `x402-fetch` / Coinbase 支付 MCP）无法直接向本端点付款，也没有 facilitator，因此不会进入 Coinbase Bazaar 目录；Agent 请按 `llms.txt` 的「报价 → 转账 → 认领」流程操作。
 
 **桌面 MCP 客户端**：`node mcp/stdio-bridge.mjs`（零依赖），配置示例见 `mcp/README.md`。
 

@@ -1,8 +1,14 @@
 # ChainSentinel
 
-> Crypto AML / on-chain risk screening API for TRON, BTC and ETH addresses. Checks every address against OFAC SDN sanctions, 900+ curated blacklist labels and live chain heuristics in ~3 seconds. Built for autonomous AI agents: no signup, no credit card, machine-readable errors, on-chain prepaid credits, and a stateless MCP-style tools endpoint.
+> A free, zero-signup **pre-interaction veto gate** for crypto addresses (TRON / BTC / ETH). It answers one question reliably: is this address on the OFAC SDN / curated sanctions list? It also returns live on-chain activity signals, and explicitly reports what it did NOT check. Built for autonomous AI agents: no signup, no credit card, machine-readable errors, on-chain prepaid credits.
 
-Read in this order: this file → /api/v1/manifest (machine-readable capabilities, prices, error codes) → /api/openapi.json (formal schemas) → /llms-full.txt (complete docs with examples).
+Read in this order: this file → /api/v1/manifest (machine-readable capabilities, prices, error codes, semantics) → /api/openapi.json (formal schemas) → /llms-full.txt (complete docs with examples).
+
+## What this service is — and is not
+
+- **Is**: a fast, free first-pass check before an agent sends funds to, receives funds from, or otherwise interacts with a crypto address. A `red` result is a hard stop (curated list hit).
+- **Is NOT**: a full AML/KYT investigation. The library is **908 entries: 906 OFAC SDN addresses + 2 public records** (Ronin Bridge, Silk Road seizure). There is **no entity attribution** (exchange / mixer / drainer / scam labels), **no multi-hop or cross-chain tracing**, **no KYT report**, and no evidence package suitable for a regulator or court.
+- **`green` is NOT a clearance.** It means "not found in our list, and the address showed normal on-chain activity". Absence of a listing is not evidence of clean funds. Every response carries `coverage` describing exactly what was checked, what was not, and what to do next.
 
 ## Quick start (no credentials, works immediately)
 
@@ -13,7 +19,11 @@ Content-Type: application/json
 {"address":"TNiq9AXBp9EjUqhDhrwrfvAA8U3GUQZH81"}
 ```
 
-Response fields: `chain`, `level` (red/yellow/green), `score` (0-100, lower = riskier), `reasons[]`, `evidenceLinks[]`, `blacklist?`, `stats?`, `upstreamReachable`, `meta` (requestId, tier, billedUsd, balanceUsd, docs).
+Response fields: `chain`, `level` (red/yellow/green), `score` (0-100, lower = riskier), `reasons[]`, `evidenceLinks[]`, `blacklist?`, `stats?`, `upstreamReachable`, **`coverage`**, and `meta` (requestId, tier, billedUsd, balanceUsd, docs).
+
+`coverage` fields: `verdictBasis` (`sanctions-list-hit` | `chain-activity-heuristics` | `degraded-upstream`), `checksPerformed[]`, `notCovered[]`, `noData`, `degraded`, `upstreamQueried`, `greenIsNotClearance` (always `true`), `recommendedAction` (`block` | `escalate` | `proceed-with-caution`), `interpretation`, `escalationHint`.
+
+**Branch on `coverage.recommendedAction`, not on `level` alone.** On `escalate`, retry later or send the address to a full KYT / forensics provider before moving funds.
 
 Free tier: 30 calls/min per IP, no auth. Invalid input returns `{ok:false,error:{code,message,hint}}` with stable `code` values.
 
@@ -23,24 +33,26 @@ Free tier: 30 calls/min per IP, no auth. Invalid input returns `{ok:false,error:
 - [POST /api/v1/quote](https://chainsentinel.hk/api/v1/quote): get a one-time `quoteId` and a unique exact USDT amount (6 decimals). Required before paying — it binds the transfer to your claim.
 - [POST /api/v1/topup](https://chainsentinel.hk/api/v1/topup): claim prepaid credits with `{txId, quoteId}`, returns a `cs_agent_*` Bearer credential. Idempotent per txId.
 - [GET /api/v1/balance](https://chainsentinel.hk/api/v1/balance): remaining credits, calls used, estimated remaining calls.
-- [GET /api/v1/manifest](https://chainsentinel.hk/api/v1/manifest): full machine-readable service manifest.
+- [GET /api/v1/manifest](https://chainsentinel.hk/api/v1/manifest): full machine-readable service manifest, including `semantics` and `dataSources`.
 - [POST /api/mcp](https://chainsentinel.hk/api/mcp): MCP-style JSON-RPC (`initialize`, `tools/list`, `tools/call`, `ping`). Tools: `check_address`, `get_balance`, `topup_info`.
-- [POST /api/check](https://chainsentinel.hk/api/check): legacy endpoint for human subscribers (`cs_live_*` tokens), unchanged.
+- [POST /api/check](https://chainsentinel.hk/api/check): legacy endpoint for human subscribers (`cs_live_*` tokens), unchanged behaviour.
 
 ## Pricing
 
-- `$0.01` per successful paid check. `1 USDT ≈ 1 USD`, so a ~1 USDT top-up ≈ 100 calls.
-- Free tier needs no payment. When you hit `402 PAYMENT_REQUIRED` or `429 RATE_LIMITED`, read the `payment` object in the response — it contains the address, network, minimum and exact steps.
+- `$0.01` per successful paid check. `1 USDT ≈ 1 USD`, so a ~1 USDT top-up ≈ 100 calls. The free tier is free and needs no payment.
+- When you hit `402 PAYMENT_REQUIRED` or `429 RATE_LIMITED`, read the `payment` object in the response — it contains the address, network, minimum and exact steps.
 - Before paying you MUST call `POST /api/v1/quote` to get a one-time `quoteId` + unique 6-decimal `amountUsdt`, then transfer **exactly** that amount. The receiving address is public; a claim keyed only by txId could be stolen, the unique amount prevents that.
-- Payment is non-custodial TRON USDT (TRC20) to the operator wallet. No card form, no KYC, no private key held by this service. This is an x402-inspired prepaid flow, not an official x402 facilitator integration.
+- Payment is non-custodial TRON USDT (TRC20) to the operator wallet. No card form, no KYC, no private key held by this service. This is an x402-inspired prepaid flow, **not** an official x402 facilitator integration — standard x402 clients (CDP SDK / x402-fetch) cannot pay this endpoint; use the flow above.
 
 ## Autonomy notes for agents
 
 1. Start with the free tier; no registration step exists and none is needed.
-2. Send `X-Request-Id` on paid calls to make billing idempotent — replaying the same id never debits twice.
-3. On `PAYMENT_REQUIRED`: call `topup_info` (or GET /api/v1/topup) → POST /api/v1/quote → transfer **exactly** the quoted 6-decimal USDT amount → POST `{txId, quoteId}` to /api/v1/topup → store the credential → retry with `Authorization: Bearer <credential>`. The unique amount is an anti-theft measure, not a rounding suggestion.
-4. Every response carries `meta.docs`; every error carries `error.code` and `error.hint`.
-5. All responses are `application/json`, CORS `*`, no cookies, no sessions, no redirects.
+2. Always read `coverage` before acting. `noData: true` means we only have heuristics, not intelligence about the counterparty. `degraded: true` means the chain data source failed — retry, do not treat the verdict as a screening result.
+3. `green` → `proceed-with-caution`, never unconditional approval. If the transaction is material, escalate to a full KYT provider.
+4. Send `X-Request-Id` on paid calls to make billing idempotent — replaying the same id never debits twice.
+5. On `PAYMENT_REQUIRED`: call `topup_info` (or GET /api/v1/topup) → POST /api/v1/quote → transfer **exactly** the quoted 6-decimal USDT amount → POST `{txId, quoteId}` to /api/v1/topup → store the credential → retry with `Authorization: Bearer <credential>`. The unique amount is an anti-theft measure, not a rounding suggestion.
+6. Every response carries `meta.docs`; every error carries `error.code` and `error.hint`.
+7. All responses are `application/json`, CORS `*`, no cookies, no sessions, no redirects.
 
 ## Discovery & docs
 
@@ -52,4 +64,4 @@ Free tier: 30 calls/min per IP, no auth. Invalid input returns `{ok:false,error:
 
 ## Scope & compliance
 
-Read-only risk screening. Supports TRON (T...), BTC (1/3/bc1...) and ETH (0x...) address formats. No trading execution, no custody, no private keys, no sanctions-evasion assistance. Results are risk signals, not legal advice.
+Read-only, best-effort pre-interaction screening. Supports TRON (T...), BTC (1/3/bc1...) and ETH (0x...) address formats. No trading execution, no custody, no private keys, no sanctions-evasion assistance. Results are risk signals, not legal advice, not a compliance clearance, and not a substitute for a full KYT investigation.
