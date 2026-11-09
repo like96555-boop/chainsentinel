@@ -2,21 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import {
-  Radar,
-  ShieldCheck,
-  ShieldAlert,
-  TrendingUp,
-  FileBarChart,
-  Lock,
-  Check,
-  Landmark,
-  Loader2,
-} from 'lucide-react';
+import { Lock, Check, Landmark, Loader2 } from 'lucide-react';
 import AddressChecker from '@/components/AddressChecker';
 import Counter from '@/components/Counter';
 import MarketTicker from '@/components/MarketTicker';
 import { BannerCarousel } from '@/components/BannerCarousel';
+import FeatureMap from '@/components/FeatureMap';
+import FeatureQuickLinks from '@/components/FeatureQuickLinks';
 
 const fadeUp = {
   initial: { opacity: 0, y: 32 },
@@ -150,24 +142,6 @@ function LeadForm({ lang = 'zh' }: { lang?: 'zh' | 'en' } = {}) {
   );
 }
 
-const FEATURES = [
-  {
-    icon: Radar,
-    title: '地址监控',
-    desc: '7×24 监控对手方地址与关联簇，风险标签变更即时推送，资金链路全程可视。',
-  },
-  {
-    icon: ShieldCheck,
-    title: '收款前拦截',
-    desc: 'Payment Firewall 在收银台前置拦截脏 U，API 3 秒返回红绿灯结论，避免账户被冻结。',
-  },
-  {
-    icon: FileBarChart,
-    title: '税务报表',
-    desc: '按司法辖区生成链上收支台账与合规报表，一键导出，审计留痕可追溯。',
-  },
-];
-
 interface PricingItem {
   id: string;
   name: string;
@@ -241,7 +215,7 @@ export default function LandingPage() {
   return (
     <main className="grid-bg">
       {/* Hero */}
-      <section className="relative mx-auto flex min-h-[88vh] max-w-5xl flex-col items-center justify-center px-6 pt-16 text-center">
+      <section id="check" className="relative mx-auto flex min-h-[88vh] max-w-5xl scroll-mt-20 flex-col items-center justify-center px-6 pt-16 text-center">
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -276,6 +250,7 @@ export default function LandingPage() {
         <p className="mx-auto mt-3 max-w-[20rem] px-2 text-center text-[11px] leading-relaxed text-slate-500 sm:max-w-none sm:px-4 sm:text-xs">
           免注册 · 每 IP 每分钟 10 次 · 结果仅供参考不构成法律意见
         </p>
+        <FeatureQuickLinks lang="zh" />
       </section>
 
       {/* 主流币行情条 */}
@@ -302,58 +277,8 @@ export default function LandingPage() {
         </p>
       </motion.section>
 
-      {/* 功能区 */}
-      <section className="mx-auto max-w-5xl px-6 py-14">
-        <motion.h2 {...fadeUp} className="text-center text-3xl font-bold">
-          三位一体，守住每一笔收款
-        </motion.h2>
-        <div className="mt-10 grid gap-6 sm:grid-cols-3">
-          {FEATURES.map((f, i) => (
-            <motion.div
-              key={f.title}
-              {...fadeUp}
-              transition={{ duration: 0.55, delay: i * 0.12 }}
-              className="rounded-2xl border border-cyber-700 bg-cyber-900/60 p-6 transition hover:border-neon-cyan/50"
-            >
-              <f.icon size={30} className="text-neon-green" />
-              <h3 className="mt-4 text-lg font-bold">{f.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-400">{f.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* 公开数据入口：风险警示榜 + 聪明钱 */}
-        <div className="mt-6 grid gap-6 sm:grid-cols-2">
-          <motion.a
-            {...fadeUp}
-            href="/alerts"
-            className="group flex items-center gap-4 rounded-2xl border border-cyber-700 bg-cyber-900/60 p-6 transition hover:border-neon-red/50"
-          >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-neon-red/10">
-              <ShieldAlert size={24} className="text-neon-red" />
-            </span>
-            <div className="flex-1">
-              <h3 className="text-lg font-bold">链上风险警示榜</h3>
-              <p className="mt-1 text-sm text-slate-400">免费公开的链上风险情报：钓鱼归集 · 洗钱通道 · 混币入口 · 诈骗资金</p>
-            </div>
-            <span className="text-neon-cyan transition group-hover:translate-x-1">→</span>
-          </motion.a>
-          <motion.a
-            {...fadeUp}
-            href="/smart-money"
-            className="group flex items-center gap-4 rounded-2xl border border-cyber-700 bg-cyber-900/60 p-6 transition hover:border-neon-yellow/50"
-          >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-neon-yellow/10">
-              <TrendingUp size={24} className="text-neon-yellow" />
-            </span>
-            <div className="flex-1">
-              <h3 className="text-lg font-bold">聪明钱追踪</h3>
-              <p className="mt-1 text-sm text-slate-400">机构与巨鲸的真实链上足迹，免费查看前 3 个监控地址</p>
-            </div>
-            <span className="text-neon-cyan transition group-hover:translate-x-1">→</span>
-          </motion.a>
-        </div>
-      </section>
+      {/* 能力地图：全站已上线功能，一屏看全 */}
+      <FeatureMap lang="zh" />
 
       {/* 定价区 */}
       <BannerCarousel position="home-pricing" />

@@ -16,18 +16,26 @@ export default function SiteFooter() {
   const agentHome = isEn ? '/en/agent' : '/agent';
   const productLinks = isEn
     ? [
-        { href: '/en', label: 'Address checker' },
+        { href: '/en#features', label: 'All features' },
+        { href: '/en#check', label: 'Address checker' },
         { href: '/en/blog', label: 'Guides' },
         { href: '/en/agent', label: 'Agent API' },
         { href: '/alerts', label: 'Risk alerts' },
+        { href: '/smart-money', label: 'Smart money' },
         { href: '/tax', label: 'Tax centre' },
+        { href: '/dashboard', label: 'Plans & metering' },
+        { href: '/en#consult', label: 'Compliance advisory' },
       ]
     : [
-        { href: '/', label: '地址筛查' },
+        { href: '/#features', label: '功能总览' },
+        { href: '/#check', label: '地址筛查' },
         { href: '/blog', label: '博客' },
         { href: '/agent', label: 'Agent API' },
         { href: '/alerts', label: '风险警示榜' },
+        { href: '/smart-money', label: '聪明钱追踪' },
         { href: '/tax', label: '税务中心' },
+        { href: '/dashboard', label: '订阅中心' },
+        { href: '/#consult', label: '合规咨询' },
       ];
   const machineLinks = [
     { href: '/llms.txt', label: 'llms.txt' },

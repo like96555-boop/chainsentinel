@@ -2,21 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import {
-  Radar,
-  ShieldCheck,
-  ShieldAlert,
-  TrendingUp,
-  FileBarChart,
-  Lock,
-  Check,
-  Landmark,
-  Loader2,
-} from 'lucide-react';
+import { Lock, Check, Landmark, Loader2 } from 'lucide-react';
 import AddressChecker from '@/components/AddressChecker';
 import Counter from '@/components/Counter';
 import MarketTicker from '@/components/MarketTicker';
 import { BannerCarousel } from '@/components/BannerCarousel';
+import FeatureMap from '@/components/FeatureMap';
+import FeatureQuickLinks from '@/components/FeatureQuickLinks';
 
 const fadeUp = {
   initial: { opacity: 0, y: 32 },
@@ -109,24 +101,6 @@ function LeadForm() {
   );
 }
 
-const FEATURES = [
-  {
-    icon: Radar,
-    title: 'Address Monitoring',
-    desc: 'Monitor counterparty addresses and associated clusters 24/7 with instant push on risk-label changes and full fund-flow visibility.',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Payment Firewall',
-    desc: 'Block dirty USDT before it reaches your checkout. The API returns a red/yellow/green verdict in 3 seconds to keep your accounts safe.',
-  },
-  {
-    icon: FileBarChart,
-    title: 'Tax Reports',
-    desc: 'On-chain income/expense ledgers and compliance reports by jurisdiction, one-click export, audit trails.',
-  },
-];
-
 interface PricingItem {
   id: string;
   name: string;
@@ -200,7 +174,7 @@ export default function EnLandingPage() {
   return (
     <main className="grid-bg">
       {/* Hero */}
-      <section className="relative mx-auto flex min-h-[88vh] max-w-5xl flex-col items-center justify-center px-6 pt-16 text-center">
+      <section id="check" className="relative mx-auto flex min-h-[88vh] max-w-5xl scroll-mt-20 flex-col items-center justify-center px-6 pt-16 text-center">
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -212,7 +186,7 @@ export default function EnLandingPage() {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="bg-gradient-to-r from-slate-100 via-neon-cyan to-neon-green bg-clip-text text-5xl font-extrabold leading-tight text-transparent sm:text-6xl"
+          className="text-balance bg-gradient-to-r from-slate-100 via-neon-cyan to-neon-green bg-clip-text text-[32px] font-extrabold leading-[1.18] tracking-[-0.02em] text-transparent sm:text-5xl lg:text-6xl"
         >
           Detect dirty-money addresses in 3 seconds
         </motion.h1>
@@ -220,7 +194,7 @@ export default function EnLandingPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.15 }}
-          className="mt-5 max-w-xl text-base text-slate-400 sm:text-lg"
+          className="text-balance mt-5 max-w-2xl px-2 text-[15px] leading-7 text-slate-400 sm:px-0 sm:text-lg sm:leading-8"
         >
           Screen counterparty addresses before you receive funds. Blacklisted labels, mixer money, scam collectors —{' '}
           <span className="text-slate-200">red light means stop</span>, protecting your accounts.
@@ -233,7 +207,10 @@ export default function EnLandingPage() {
         >
           <AddressChecker lang="en" />
         </motion.div>
-        <p className="mt-3 text-xs text-slate-500">No sign-up · 10 checks/min per IP · Results are risk signals, not legal advice</p>
+        <p className="mx-auto mt-3 max-w-[20rem] px-2 text-center text-[11px] leading-relaxed text-slate-500 sm:max-w-none sm:px-4 sm:text-xs">
+          No sign-up · 10 checks/min per IP · Results are risk signals, not legal advice
+        </p>
+        <FeatureQuickLinks lang="en" />
       </section>
 
       {/* Market ticker */}
@@ -260,58 +237,8 @@ export default function EnLandingPage() {
         </p>
       </motion.section>
 
-      {/* Features */}
-      <section className="mx-auto max-w-5xl px-6 py-14">
-        <motion.h2 {...fadeUp} className="text-center text-3xl font-bold">
-          Three lines of defense for every payment you receive
-        </motion.h2>
-        <div className="mt-10 grid gap-6 sm:grid-cols-3">
-          {FEATURES.map((f, i) => (
-            <motion.div
-              key={f.title}
-              {...fadeUp}
-              transition={{ duration: 0.55, delay: i * 0.12 }}
-              className="rounded-2xl border border-cyber-700 bg-cyber-900/60 p-6 transition hover:border-neon-cyan/50"
-            >
-              <f.icon size={30} className="text-neon-green" />
-              <h3 className="mt-4 text-lg font-bold">{f.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-400">{f.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Public data entries */}
-        <div className="mt-6 grid gap-6 sm:grid-cols-2">
-          <motion.a
-            {...fadeUp}
-            href="/alerts"
-            className="group flex items-center gap-4 rounded-2xl border border-cyber-700 bg-cyber-900/60 p-6 transition hover:border-neon-red/50"
-          >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-neon-red/10">
-              <ShieldAlert size={24} className="text-neon-red" />
-            </span>
-            <div className="flex-1">
-              <h3 className="text-lg font-bold">On-chain Risk Alerts</h3>
-              <p className="mt-1 text-sm text-slate-400">Free public on-chain threat intel: phishing collectors · laundering channels · mixer entries · scam funds</p>
-            </div>
-            <span className="text-neon-cyan transition group-hover:translate-x-1">→</span>
-          </motion.a>
-          <motion.a
-            {...fadeUp}
-            href="/smart-money"
-            className="group flex items-center gap-4 rounded-2xl border border-cyber-700 bg-cyber-900/60 p-6 transition hover:border-neon-yellow/50"
-          >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-neon-yellow/10">
-              <TrendingUp size={24} className="text-neon-yellow" />
-            </span>
-            <div className="flex-1">
-              <h3 className="text-lg font-bold">Smart Money Tracker</h3>
-              <p className="mt-1 text-sm text-slate-400">Real on-chain footprints of institutions &amp; whales. First 3 watched addresses free.</p>
-            </div>
-            <span className="text-neon-cyan transition group-hover:translate-x-1">→</span>
-          </motion.a>
-        </div>
-      </section>
+      {/* Capability map: every live feature in one place */}
+      <FeatureMap lang="en" />
 
       {/* Pricing */}
       <BannerCarousel position="home-pricing" />

@@ -190,3 +190,14 @@ Every error: `{ "ok": false, "error": { "code": "...", "message": "...", "hint":
 ## 8. Legacy human API (unchanged)
 
 `POST /api/check` with `Authorization: Bearer cs_live_*` uses the existing daily-quota subscription plans (free 100/day, Pro $29/mo 1000/day, Business $199/mo 10000/day) with Stripe and TRON USDT checkout. Agents should prefer `/api/v1/check`, which needs no signup.
+
+## 9. Human-facing capability map (answer "what can your product do?")
+
+When a user asks about the whole product rather than the API, point to `https://chainsentinel.hk/#features` (English: `/en#features`). It is the authoritative, grouped list of every live capability and is rendered in the page HTML, so it is readable by crawlers and by agents fetching the page.
+
+- Pre-payment screening: free address check (`/#check`), sanctions/coverage report (`/agent`), wallet monitoring & alerts (`/dashboard`, sign-in).
+- Public intelligence: risk alert board (`/alerts`, no login), smart money flows (`/smart-money`, first 3 free, full list paid).
+- Compliance & reporting: tax centre — CSV FIFO/LIFO/HIFO cost-basis reports (`/tax`), RWA / stablecoin advisory (`/#consult`), field guides (`/blog`).
+- Developers & agents: zero-signup Agent API (`/agent`), machine discovery files, plans & metering (`/dashboard`).
+
+Badges on that page state real access levels. Unshipped capabilities are deliberately not listed; do not infer features that are not on the page. This section describes product pages, not additional API endpoints — the endpoint list in §6 and `/api/openapi.json` remains authoritative for machine calls.
