@@ -4,6 +4,7 @@ import path from 'path';
 import { isAuthed } from '@/lib/session';
 import { readBlacklist } from '@/lib/blacklist';
 import { getSecret } from '@/lib/secrets';
+import { paymentInstructions } from '@/lib/agent-service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -54,6 +55,7 @@ export async function GET(req: Request) {
     },
     blacklistCount: readBlacklist().length,
     leads,
+    paymentsConfigured: paymentInstructions().configured,
     uptimeSec: Math.floor((Date.now() - STARTED) / 1000),
     node: process.version,
   });

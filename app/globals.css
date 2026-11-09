@@ -38,3 +38,77 @@ body {
   .report-paper table { page-break-inside: auto; }
   .report-paper tr { page-break-inside: avoid; }
 }
+
+/* ============================================================
+   运营后台 v2 · 浅色主题适配层
+   后台采用与营销站不同的视觉语言（浅色 / 克制 / 数据导向）。
+   这里在 .admin-light 作用域内重映射旧模块的赛博配色，
+   使既有 9 个功能模块无需逐行改写即可融入新设计系统。
+   ============================================================ */
+.admin-light { color: #18181b; }
+.admin-light .grid-bg { background-image: none; }
+.admin-light .bg-cyber-900\/40,
+.admin-light .bg-cyber-900\/60,
+.admin-light .bg-cyber-900\/70,
+.admin-light .bg-cyber-950,
+.admin-light .bg-cyber-950\/40,
+.admin-light .bg-cyber-950\/50,
+.admin-light .bg-cyber-950\/60,
+.admin-light .bg-cyber-950\/70 { background-color: #ffffff; }
+.admin-light .bg-cyber-950\/40,
+.admin-light .bg-cyber-950\/50,
+.admin-light .bg-cyber-950\/60,
+.admin-light .bg-cyber-950\/70 { background-color: #fafafa; }
+.admin-light .border-cyber-700,
+.admin-light .border-cyber-700\/70,
+.admin-light .border-cyber-800,
+.admin-light .border-cyber-800\/60,
+.admin-light .border-slate-600\/60 { border-color: #e4e4e7; }
+.admin-light .border-neon-cyan\/40,
+.admin-light .border-neon-cyan\/50,
+.admin-light .border-neon-cyan\/60,
+.admin-light .focus\:border-neon-cyan\/60:focus,
+.admin-light .hover\:border-neon-cyan\/60:hover { border-color: #93c5fd; }
+.admin-light .border-neon-green\/40,
+.admin-light .hover\:border-neon-green:hover { border-color: #6ee7b7; }
+.admin-light .border-neon-yellow\/40,
+.admin-light .hover\:border-neon-yellow\/60:hover { border-color: #fcd34d; }
+.admin-light .hover\:border-neon-red\/60:hover { border-color: #fca5a5; }
+.admin-light .ring-neon-cyan\/40,
+.admin-light .ring-neon-cyan\/50 { --tw-ring-color: #bfdbfe; }
+.admin-light .text-slate-100,
+.admin-light .text-slate-200,
+.admin-light .text-slate-300 { color: #27272a; }
+.admin-light .text-slate-400 { color: #52525b; }
+.admin-light .text-slate-500 { color: #71717a; }
+.admin-light .text-slate-600 { color: #a1a1aa; }
+.admin-light .text-neon-cyan { color: #2563eb; }
+.admin-light .text-neon-green { color: #059669; }
+.admin-light .text-neon-red { color: #dc2626; }
+.admin-light .text-neon-yellow { color: #b45309; }
+.admin-light .text-amber-300 { color: #b45309; }
+.admin-light .text-emerald-300 { color: #047857; }
+.admin-light .hover\:text-neon-cyan:hover { color: #1d4ed8; }
+.admin-light .hover\:text-neon-green:hover { color: #047857; }
+.admin-light .hover\:text-neon-red:hover { color: #dc2626; }
+.admin-light .hover\:text-neon-yellow:hover { color: #92400e; }
+.admin-light .hover\:text-slate-200:hover { color: #18181b; }
+.admin-light .bg-neon-cyan\/90 { background-color: #2563eb; }
+.admin-light .bg-neon-cyan\/15,
+.admin-light .bg-neon-cyan\/20 { background-color: #eff6ff; }
+.admin-light .bg-neon-yellow\/10 { background-color: #fffbeb; }
+.admin-light .bg-emerald-500\/15 { background-color: #ecfdf5; }
+.admin-light .bg-amber-500\/15 { background-color: #fffbeb; }
+.admin-light .bg-slate-600 { background-color: #a1a1aa; }
+.admin-light .hover\:bg-neon-cyan:hover { background-color: #1d4ed8; }
+.admin-light .hover\:bg-neon-cyan\/30:hover { background-color: #dbeafe; }
+.admin-light .text-cyber-950 { color: #ffffff; }
+.admin-light .accent-neon-cyan { accent-color: #2563eb; }
+.admin-light input::placeholder,
+.admin-light textarea::placeholder { color: #a1a1aa; }
+
+/* 细滚动条，避免侧栏在窄屏出现粗重轨道 */
+.admin-light * { scrollbar-width: thin; scrollbar-color: #d4d4d8 transparent; }
+.admin-light *::-webkit-scrollbar { width: 6px; height: 6px; }
+.admin-light *::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 999px; }
+.admin-light *::-webkit-scrollbar-track { background: transparent; }
