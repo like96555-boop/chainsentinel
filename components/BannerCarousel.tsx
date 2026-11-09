@@ -80,8 +80,10 @@ export function AnnouncementBar() {
   const cfg = useSiteConfig();
   if (!cfg?.announcement) return null;
   return (
-    <div className="border-b border-cyber-800 bg-neon-yellow/10 px-4 py-1.5 text-center text-xs text-neon-yellow">
-      📢 {cfg.announcement}
+    <div className="border-b border-cyber-800 bg-neon-yellow/10 px-4 py-1.5">
+      <p className="mx-auto max-w-5xl text-center text-[11px] font-medium leading-relaxed tracking-wide text-neon-yellow sm:text-xs">
+        <span className="mr-1.5" aria-hidden="true">📢</span>{cfg.announcement}
+      </p>
     </div>
   );
 }

@@ -245,7 +245,7 @@ export default function LandingPage() {
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="mb-4 rounded-full border border-neon-cyan/30 bg-neon-cyan/10 px-4 py-1 text-xs text-neon-cyan"
+          className="mb-5 rounded-full border border-neon-cyan/30 bg-neon-cyan/10 px-4 py-1 text-[11px] font-medium tracking-[0.1em] text-neon-cyan sm:text-xs"
         >
           TRON · BTC · ETH 多链 · 收款风控 SaaS
         </motion.p>
@@ -253,7 +253,7 @@ export default function LandingPage() {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="bg-gradient-to-r from-slate-100 via-neon-cyan to-neon-green bg-clip-text text-5xl font-extrabold leading-tight text-transparent sm:text-6xl"
+          className="bg-gradient-to-r from-slate-100 via-neon-cyan to-neon-green bg-clip-text text-[32px] font-extrabold leading-[1.18] tracking-[-0.02em] text-transparent sm:text-5xl lg:text-6xl"
         >
           3 秒识别黑钱地址
         </motion.h1>
@@ -261,10 +261,9 @@ export default function LandingPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.15 }}
-          className="mt-5 max-w-xl text-base text-slate-400 sm:text-lg"
+          className="text-balance mt-5 max-w-2xl px-2 text-[15px] leading-7 text-slate-400 sm:px-0 sm:text-lg sm:leading-8"
         >
-          收款前一键检测对手方地址。命中黑产标签、混币资金、诈骗归集——
-          <span className="text-slate-200">红灯即停</span>，守住您的账户安全。
+          收款前一键检测对手方地址。命中黑产标签、<span className="whitespace-nowrap">混币资金</span>、诈骗归集时<span className="whitespace-nowrap text-slate-200">红灯即停</span>，守住您的账户安全。
         </motion.p>
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -274,7 +273,9 @@ export default function LandingPage() {
         >
           <AddressChecker />
         </motion.div>
-        <p className="mt-3 text-xs text-slate-500">免注册 · 每 IP 每分钟 10 次 · 结果仅供参考不构成法律意见</p>
+        <p className="mx-auto mt-3 max-w-[20rem] px-2 text-center text-[11px] leading-relaxed text-slate-500 sm:max-w-none sm:px-4 sm:text-xs">
+          免注册 · 每 IP 每分钟 10 次 · 结果仅供参考不构成法律意见
+        </p>
       </section>
 
       {/* 主流币行情条 */}

@@ -27,7 +27,7 @@ export default function LoginButton({ lang = 'zh' }: { lang?: 'zh' | 'en' } = {}
     return (
       <a
         href="/dashboard"
-        className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs text-emerald-300 transition hover:bg-emerald-500/20"
+        className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs text-emerald-300 transition hover:bg-emerald-500/20"
         title={t.subscription}
       >
         <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
@@ -38,7 +38,7 @@ export default function LoginButton({ lang = 'zh' }: { lang?: 'zh' | 'en' } = {}
   return (
     <a
       href="/dashboard"
-      className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#7170ff] to-[#9d8cff] px-3.5 py-1.5 text-xs font-semibold text-white transition hover:brightness-110"
+      className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-gradient-to-r from-[#7170ff] to-[#9d8cff] px-3.5 py-1.5 text-xs font-semibold text-white transition hover:brightness-110"
     >
       {t.login}
     </a>

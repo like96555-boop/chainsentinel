@@ -17,6 +17,20 @@ body {
   background: rgba(56, 224, 255, 0.35);
 }
 
+/* 顶部导航极窄宽度下横向滚动：隐藏滚动条但保留可滚动，不压缩文字 */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* 首屏副标题两行均衡，避免末行只剩几个字 */
+.text-balance {
+  text-wrap: balance;
+}
+
 .grid-bg {
   background-image:
     linear-gradient(rgba(56, 224, 255, 0.05) 1px, transparent 1px),
