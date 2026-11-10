@@ -28,10 +28,13 @@ export interface FeatureItem {
   href: string;
   badge: string;
   tone: FeatureTone;
+  /** 静态资源 / 站外文件：用原生链接新标签打开，不参与 Next 路由 */
+  external?: boolean;
 }
 
 export interface FeatureGroup {
   id: string;
+  /** 分组锚点统一派生为 features-<id>，场景直达条与移动端菜单共用 */
   icon: LucideIcon;
   title: string;
   desc: string;
@@ -42,24 +45,37 @@ export interface QuickLink {
   icon: LucideIcon;
   label: string;
   href: string;
+  count: number;
 }
 
 export interface CatalogLabels {
   home: string;
-  menu: string;
   all: string;
-  menuNote: string;
+  /** 顶部常驻入口：直接跳能力地图，不折叠、不依赖悬停 */
+  navAll: string;
+  navCheck: string;
   eyebrow: string;
   title: string;
   subtitle: string;
   disclaimer: string;
-  quickLabel: string;
-  quickCta: string;
+  sceneLabel: string;
+  sceneCta: string;
+  statTotal: string;
+  statFree: string;
+  statGroups: string;
+  tip: string;
+  mobileTitle: string;
+  mobileSubtitle: string;
+  mobileCta: string;
+  directLabel: string;
+  closeLabel: string;
+  openLabel: string;
   pricing: string;
   blog: string;
   alerts: string;
   smartMoney: string;
   agent: string;
+  tax: string;
   telegram: string;
   mapHref: string;
 }
@@ -91,20 +107,31 @@ export function FeatureBadge({ item, compact = false }: { item: FeatureItem; com
 const ZH: Catalog = {
   labels: {
     home: '首页',
-    menu: '产品功能',
     all: '查看全部功能',
-    menuNote: '以下均为已上线能力 · 使用门槛以标签为准',
+    navAll: '全部功能',
+    navCheck: '免费查地址',
     eyebrow: 'CAPABILITY MAP · 能力地图',
     title: '我们到底提供什么，一屏看全',
-    subtitle: '按使用场景分组，点任意一张卡片即可直接使用。不再让客户从页脚里翻功能。',
+    subtitle: '11 项已上线能力，按 4 个真实使用场景铺开。不用展开菜单、不用翻页脚，点任意一项就能直接用。',
     disclaimer: '清单内全部为当前已上线功能；标注「部分免费 / 登录可用 / 预约制」的条目按对应门槛开放，尚未接入的能力不列入。',
-    quickLabel: '我们还能做什么：',
-    quickCta: '全部功能',
+    sceneLabel: '按场景直达：',
+    sceneCta: '看完整清单',
+    statTotal: '项已上线能力',
+    statFree: '项免登录可用',
+    statGroups: '个使用场景',
+    tip: '点任意功能直接打开 · 门槛以标签为准',
+    mobileTitle: '链哨全部功能',
+    mobileSubtitle: '11 项已上线能力，按场景分组，点一下直接打开',
+    mobileCta: '查看能力地图（一屏看全）',
+    directLabel: '常用直达',
+    closeLabel: '关闭导航菜单',
+    openLabel: '打开导航菜单',
     pricing: '定价',
     blog: '博客',
     alerts: '风险警示榜',
     smartMoney: '聪明钱',
     agent: 'Agent API',
+    tax: '税务中心',
     telegram: 'Telegram 客服',
     mapHref: '/#features',
   },
@@ -216,6 +243,7 @@ const ZH: Catalog = {
           title: '机器可读发现层',
           desc: 'llms.txt、OpenAPI 3.1、agent card、manifest 一站可达',
           href: '/llms.txt',
+          external: true,
           badge: '公开',
           tone: 'dev',
         },
@@ -231,31 +259,41 @@ const ZH: Catalog = {
     },
   ],
   quick: [
-    { icon: ShieldAlert, label: '风险警示榜', href: '/alerts' },
-    { icon: TrendingUp, label: '聪明钱追踪', href: '/smart-money' },
-    { icon: FileBarChart, label: '税务报表', href: '/tax' },
-    { icon: Bot, label: 'Agent API', href: '/agent' },
-    { icon: Landmark, label: '合规咨询', href: '/#consult' },
+    { icon: ShieldCheck, label: '收款前风控', href: '/#features-risk', count: 3 },
+    { icon: Radar, label: '公开链上情报', href: '/#features-intel', count: 2 },
+    { icon: FileBarChart, label: '合规与报表', href: '/#features-compliance', count: 3 },
+    { icon: Bot, label: '开发者 & Agent', href: '/#features-developer', count: 3 },
   ],
 };
 
 const EN: Catalog = {
   labels: {
     home: 'Home',
-    menu: 'Features',
     all: 'See all features',
-    menuNote: 'All capabilities below are live · badges show access level',
+    navAll: 'All features',
+    navCheck: 'Free check',
     eyebrow: 'CAPABILITY MAP',
     title: 'Everything we offer, in one place',
-    subtitle: 'Grouped by the job you need to get done. Every card is a working feature you can open right now.',
+    subtitle: '11 live capabilities across 4 real-world scenarios. No menu to expand, no footer to dig through — every item opens the working feature.',
     disclaimer: 'Only live capabilities are listed. Badges mark what needs sign-in, a paid plan, or a booking; unshipped ideas are not listed.',
-    quickLabel: 'Also available:',
-    quickCta: 'All features',
+    sceneLabel: 'Jump to a scenario:',
+    sceneCta: 'Full list',
+    statTotal: 'live capabilities',
+    statFree: 'usable without sign-in',
+    statGroups: 'scenarios',
+    tip: 'Every item opens the real feature · badges show the access level',
+    mobileTitle: 'All ChainSentinel features',
+    mobileSubtitle: '11 live capabilities, grouped by scenario. Tap any item to open it.',
+    mobileCta: 'Open the capability map',
+    directLabel: 'Quick links',
+    closeLabel: 'Close navigation menu',
+    openLabel: 'Open navigation menu',
     pricing: 'Pricing',
     blog: 'Guides',
     alerts: 'Risk alerts',
     smartMoney: 'Smart money',
     agent: 'Agent API',
+    tax: 'Tax centre',
     telegram: 'Telegram',
     mapHref: '/en#features',
   },
@@ -367,6 +405,7 @@ const EN: Catalog = {
           title: 'Machine discovery',
           desc: 'llms.txt, OpenAPI 3.1, agent card and manifest in one place',
           href: '/llms.txt',
+          external: true,
           badge: 'Public',
           tone: 'dev',
         },
@@ -382,11 +421,10 @@ const EN: Catalog = {
     },
   ],
   quick: [
-    { icon: ShieldAlert, label: 'Risk alerts', href: '/alerts' },
-    { icon: TrendingUp, label: 'Smart money', href: '/smart-money' },
-    { icon: FileBarChart, label: 'Tax reports', href: '/tax' },
-    { icon: Bot, label: 'Agent API', href: '/en/agent' },
-    { icon: Landmark, label: 'Advisory', href: '/en#consult' },
+    { icon: ShieldCheck, label: 'Pre-payment screening', href: '/en#features-risk', count: 3 },
+    { icon: Radar, label: 'On-chain intel', href: '/en#features-intel', count: 2 },
+    { icon: FileBarChart, label: 'Compliance', href: '/en#features-compliance', count: 3 },
+    { icon: Bot, label: 'Developers & agents', href: '/en#features-developer', count: 3 },
   ],
 };
 

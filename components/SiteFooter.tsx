@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import SmartLink from '@/components/SmartLink';
 
 /**
  * 全站页脚。两个作用：
@@ -68,9 +69,9 @@ export default function SiteFooter() {
           <ul className="mt-3 space-y-2">
             {productLinks.map((l) => (
               <li key={l.href}>
-                <a href={l.href} className="text-xs text-slate-400 transition hover:text-neon-cyan">
+                <SmartLink href={l.href} className="text-xs text-slate-400 transition hover:text-neon-cyan">
                   {l.label}
-                </a>
+                </SmartLink>
               </li>
             ))}
           </ul>
@@ -83,15 +84,20 @@ export default function SiteFooter() {
           <ul className="mt-3 space-y-2">
             {machineLinks.map((l) => (
               <li key={l.href}>
-                <a href={l.href} className="font-mono text-xs text-slate-400 transition hover:text-neon-cyan">
+                <a
+                  href={l.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-xs text-slate-400 transition hover:text-neon-cyan"
+                >
                   {l.label}
                 </a>
               </li>
             ))}
             <li>
-              <a href={agentHome} className="text-xs text-neon-cyan transition hover:underline">
+              <SmartLink href={agentHome} className="text-xs text-neon-cyan transition hover:underline">
                 {isEn ? 'Agent integration guide →' : 'Agent 接入说明 →'}
-              </a>
+              </SmartLink>
             </li>
           </ul>
         </div>

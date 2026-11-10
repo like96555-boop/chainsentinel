@@ -4,6 +4,13 @@
 
 html {
   scroll-behavior: smooth;
+  /* sticky 导航 + 公告条的高度，锚点跳转时标题不被盖住 */
+  scroll-padding-top: 72px;
+}
+
+:focus-visible {
+  outline: 2px solid #38e0ff;
+  outline-offset: 2px;
 }
 
 body {
@@ -36,6 +43,71 @@ body {
     linear-gradient(rgba(56, 224, 255, 0.05) 1px, transparent 1px),
     linear-gradient(90deg, rgba(56, 224, 255, 0.05) 1px, transparent 1px);
   background-size: 44px 44px;
+}
+
+/* ===== 前台导航 / 能力地图：轻量、可预期的动效 =====
+   只动 transform / opacity / background-color，不触发布局重排；
+   悬停效果限定在真实鼠标设备，避免触屏点完留下粘滞态。 */
+.cap-reveal {
+  animation: capReveal 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes capReveal {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.cap-card,
+.cap-row,
+.nav-all-btn,
+.quick-chip,
+.scene-chip {
+  transition:
+    transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.24s ease,
+    border-color 0.24s ease,
+    box-shadow 0.24s ease,
+    color 0.24s ease,
+    opacity 0.24s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cap-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(56, 224, 255, 0.45);
+    background-color: rgba(12, 22, 37, 0.9);
+    box-shadow: 0 18px 44px -26px rgba(56, 224, 255, 0.65);
+  }
+  .cap-row:hover {
+    background-color: rgba(30, 45, 66, 0.55);
+    transform: translateX(2px);
+  }
+  .nav-all-btn:hover {
+    background-color: rgba(56, 224, 255, 0.18);
+    border-color: rgba(56, 224, 255, 0.7);
+    box-shadow: 0 0 0 3px rgba(56, 224, 255, 0.08);
+  }
+  .quick-chip:hover,
+  .scene-chip:hover {
+    transform: translateY(-2px);
+    border-color: rgba(56, 224, 255, 0.55);
+    color: #e6edf7;
+  }
+}
+
+.cap-row:active,
+.quick-chip:active,
+.scene-chip:active,
+.nav-all-btn:active {
+  transform: scale(0.985);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .cap-reveal { animation: none; }
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
 
 /* ===== 打印友好：税表审计报告 ===== */

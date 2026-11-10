@@ -6,8 +6,8 @@ import { useEffect, useState } from 'react';
 export default function LoginButton({ lang = 'zh' }: { lang?: 'zh' | 'en' } = {}) {
   const [email, setEmail] = useState<string | null>(null);
   const t = lang === 'en'
-    ? { subscription: 'My subscription', login: 'Log in / Sign up' }
-    : { subscription: '我的订阅', login: '登录 / 注册' };
+    ? { subscription: 'My subscription', login: 'Log in / Sign up', loginShort: 'Log in' }
+    : { subscription: '我的订阅', login: '登录 / 注册', loginShort: '登录' };
 
   useEffect(() => {
     const check = () => {
@@ -31,7 +31,7 @@ export default function LoginButton({ lang = 'zh' }: { lang?: 'zh' | 'en' } = {}
         title={t.subscription}
       >
         <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
-        {short}
+        <span className="max-w-[92px] truncate sm:max-w-none">{short}</span>
       </a>
     );
   }
@@ -40,7 +40,8 @@ export default function LoginButton({ lang = 'zh' }: { lang?: 'zh' | 'en' } = {}
       href="/dashboard"
       className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-gradient-to-r from-[#7170ff] to-[#9d8cff] px-3.5 py-1.5 text-xs font-semibold text-white transition hover:brightness-110"
     >
-      {t.login}
+      <span className="sm:hidden">{t.loginShort}</span>
+      <span className="hidden sm:inline">{t.login}</span>
     </a>
   );
 }

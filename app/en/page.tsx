@@ -174,7 +174,7 @@ export default function EnLandingPage() {
   return (
     <main className="grid-bg">
       {/* Hero */}
-      <section id="check" className="relative mx-auto flex min-h-[88vh] max-w-5xl scroll-mt-20 flex-col items-center justify-center px-6 pt-16 text-center">
+      <section id="check" className="relative mx-auto flex min-h-[76vh] max-w-5xl flex-col items-center justify-center px-6 pt-10 text-center sm:min-h-[80vh]">
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -216,6 +216,9 @@ export default function EnLandingPage() {
       {/* Market ticker */}
       <MarketTicker />
 
+      {/* Capability map right below the fold: all 11 live features in one view */}
+      <FeatureMap lang="en" />
+
       {/* Live statistics */}
       <motion.section {...fadeUp} className="mx-auto max-w-5xl px-6 py-14">
         <div className="grid gap-6 rounded-2xl border border-cyber-700 bg-cyber-900/60 p-8 text-center sm:grid-cols-3">
@@ -236,9 +239,6 @@ export default function EnLandingPage() {
           Live statistics · Data from ChainSentinel monitoring records &amp; risk label database (OFAC SDN + public incidents)
         </p>
       </motion.section>
-
-      {/* Capability map: every live feature in one place */}
-      <FeatureMap lang="en" />
 
       {/* Pricing */}
       <BannerCarousel position="home-pricing" />

@@ -215,7 +215,7 @@ export default function LandingPage() {
   return (
     <main className="grid-bg">
       {/* Hero */}
-      <section id="check" className="relative mx-auto flex min-h-[88vh] max-w-5xl scroll-mt-20 flex-col items-center justify-center px-6 pt-16 text-center">
+      <section id="check" className="relative mx-auto flex min-h-[76vh] max-w-5xl flex-col items-center justify-center px-6 pt-10 text-center sm:min-h-[80vh]">
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -256,6 +256,9 @@ export default function LandingPage() {
       {/* 主流币行情条 */}
       <MarketTicker />
 
+      {/* 能力地图紧跟首屏：客户滚动一屏就能看全 11 项能力 */}
+      <FeatureMap lang="zh" />
+
       {/* 信任区：真实实时统计 */}
       <motion.section {...fadeUp} className="mx-auto max-w-5xl px-6 py-14">
         <div className="grid gap-6 rounded-2xl border border-cyber-700 bg-cyber-900/60 p-8 text-center sm:grid-cols-3">
@@ -276,9 +279,6 @@ export default function LandingPage() {
           实时统计 · 数据来自链哨监控记录与风险标签库（OFAC SDN + 公开事件）
         </p>
       </motion.section>
-
-      {/* 能力地图：全站已上线功能，一屏看全 */}
-      <FeatureMap lang="zh" />
 
       {/* 定价区 */}
       <BannerCarousel position="home-pricing" />
